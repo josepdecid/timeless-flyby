@@ -31,6 +31,8 @@ export interface Settings {
   follow: boolean;
   /** What the panel under the map shows. */
   stat: StatView;
+  /** Draw the elevation profile behind the other charts. */
+  eleOverlay: boolean;
 }
 
 interface Session {
@@ -52,6 +54,7 @@ const DEFAULT_SETTINGS: Settings = {
   replaySpeed: 0,
   follow: false,
   stat: 'ahead',
+  eleOverlay: false,
 };
 
 export interface Notice {

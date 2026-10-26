@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Chart, { type ChartSeries } from './Chart.svelte';
+  import Chart, { type ChartOverlay, type ChartSeries } from './Chart.svelte';
   import Legend from './Legend.svelte';
   import SplitsTable from './SplitsTable.svelte';
   import { app, type StatView } from '../lib/state.svelte';
@@ -122,6 +122,19 @@
     options.some((o) => o.id === app.settings.stat && !o.disabled) ? app.settings.stat : app.speedMode,
   );
 
+  /** Elevation can sit behind any other chart; it's the same route, so one profile is enough. */
+  const canOverlay = $derived(has('ele') && active !== 'ele' && active !== 'splits');
+  const overlay: ChartOverlay | null = $derived.by(() => {
+    if (!cmp || !canOverlay || !app.settings.eleOverlay) return null;
+    const tr = cmp.tracks.find((t) => t.activity.id === cmp.refId && t.metrics.ele) ?? cmp.tracks.find((t) => t.metrics.ele);
+    if (!tr) return null;
+    return {
+      label: 'Elevation',
+      values: tr.metrics.ele!.map((v) => (v == null ? null : elevationValue(v, app.settings.units))),
+      format: (v) => `${Math.round(v)} ${eleUnit}`,
+    };
+  });
+
   /** Replay position per activity id, in display distance units. */
   const markers = $derived(
     new Map(view.replayActive ? view.replay.map((r) => [r.id, distanceValue(r.x, app.settings.units)]) : []),
@@ -156,6 +169,12 @@
           <option value={o.id} disabled={o.disabled}>{o.label}{o.disabled ? ' (needs 2+ activities)' : ''}</option>
         {/each}
       </select>
+      {#if canOverlay}
+        <label class="check">
+          <input type="checkbox" bind:checked={app.settings.eleOverlay} />
+          <span>Elevation</span>
+        </label>
+      {/if}
       <Legend />
     </div>
     <div class="body" style:--chart-h="{CHART_HEIGHT}px">
@@ -174,6 +193,7 @@
           zeroLine={spec.zeroLine}
           timeTicks={spec.timeTicks}
           markers={markersFor(spec.series)}
+          {overlay}
           onhover={hover}
           onclick={seek}
         />
@@ -195,6 +215,17 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 16px;
+  }
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .check input {
+    accent-color: var(--accent);
   }
   /* Fixed height so switching views never resizes the map above. */
   .body {

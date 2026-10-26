@@ -6,6 +6,13 @@
     /** Values aligned with the shared x data. */
     values: (number | null)[];
   }
+
+  /** A secondary profile drawn faintly behind the series, on its own scale. */
+  export interface ChartOverlay {
+    label: string;
+    values: (number | null)[];
+    format: (v: number) => string;
+  }
 </script>
 
 <script lang="ts">
@@ -26,6 +33,7 @@
     zeroLine = false,
     timeTicks = false,
     markers = [],
+    overlay = null,
     onhover,
     onclick,
   }: {
@@ -44,6 +52,7 @@
     timeTicks?: boolean;
     /** Replay position per series, in x units (null = hide). */
     markers?: (number | null)[];
+    overlay?: ChartOverlay | null;
     onhover?: (idx: number | null) => void;
     onclick?: (idx: number) => void;
   } = $props();
@@ -115,7 +124,14 @@
               )}</span><span class="val num">${v == null ? '–' : yFormat(v as number)}</span></div>`;
             })
             .join('');
-          tip.innerHTML = `<div class="hd num">${xFormat(u.data[0][idx] as number)}</div>${rows}`;
+          const ov = overlay?.values[idx];
+          const ovRow =
+            overlay && ov != null
+              ? `<div class="row ov"><span class="swatch area"></span><span class="lbl">${escapeHtml(
+                  overlay.label,
+                )}</span><span class="val num">${overlay.format(ov)}</span></div>`
+              : '';
+          tip.innerHTML = `<div class="hd num">${xFormat(u.data[0][idx] as number)}</div>${rows}${ovRow}`;
           tip.style.display = 'block';
           const left = u.cursor.left;
           const w = tip.offsetWidth;
@@ -153,6 +169,57 @@
         },
       },
     };
+  }
+
+  /** Fills the overlay profile across the plot, under the grid's series. */
+  function drawOverlay(u: uPlot, values: (number | null)[]) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const v of values) {
+      if (v == null) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    if (!Number.isFinite(min)) return;
+    // Keep the profile in the lower part so it reads as a backdrop; flat routes stay a low band.
+    const span = Math.max(max - min, 10);
+    const { left, top, width, height } = u.bbox;
+    const bottom = top + height;
+    const yOf = (v: number) => bottom - ((v - min) / span) * height * 0.7 - height * 0.04;
+    const ctx = u.ctx;
+    const color = css('--muted');
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, width, height);
+    ctx.clip();
+    // Trace each run of present values as its own filled shape.
+    let start: number | null = null;
+    let lastX = 0;
+    const close = () => {
+      if (start == null) return;
+      ctx.lineTo(lastX, bottom);
+      ctx.lineTo(start, bottom);
+      ctx.closePath();
+      start = null;
+    };
+    ctx.beginPath();
+    live.x.forEach((xv, i) => {
+      const v = values[i];
+      if (v == null) return close();
+      const px = u.valToPos(xv, 'x', true);
+      const py = yOf(v);
+      if (start == null) {
+        start = px;
+        ctx.moveTo(px, bottom);
+      }
+      ctx.lineTo(px, py);
+      lastX = px;
+    });
+    close();
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
   }
 
   function escapeHtml(s: string) {
@@ -216,24 +283,24 @@
         })),
       ],
       plugins: [tooltipPlugin(), markersPlugin()],
-      hooks: zeroLine
-        ? {
-            drawAxes: [
-              (u: uPlot) => {
-                const y0 = u.valToPos(0, 'y', true);
-                const ctx = u.ctx;
-                ctx.save();
-                ctx.strokeStyle = css('--axis');
-                ctx.lineWidth = devicePixelRatio;
-                ctx.beginPath();
-                ctx.moveTo(u.bbox.left, y0);
-                ctx.lineTo(u.bbox.left + u.bbox.width, y0);
-                ctx.stroke();
-                ctx.restore();
-              },
-            ],
-          }
-        : {},
+      hooks: {
+        drawAxes: [
+          (u: uPlot) => {
+            if (overlay) drawOverlay(u, overlay.values);
+            if (!zeroLine) return;
+            const y0 = u.valToPos(0, 'y', true);
+            const ctx = u.ctx;
+            ctx.save();
+            ctx.strokeStyle = css('--axis');
+            ctx.lineWidth = devicePixelRatio;
+            ctx.beginPath();
+            ctx.moveTo(u.bbox.left, y0);
+            ctx.lineTo(u.bbox.left + u.bbox.width, y0);
+            ctx.stroke();
+            ctx.restore();
+          },
+        ],
+      },
     };
     const data = [x, ...series.map((s) => s.values)] as uPlot.AlignedData;
     plot = new uPlot(opts, data, el);
@@ -250,7 +317,7 @@
 
   $effect(() => {
     // Track everything that changes the plot's structure.
-    void [x, series, height, invert, app.dark];
+    void [x, series, height, invert, overlay, app.dark];
     build();
   });
 
@@ -323,6 +390,18 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 160px;
+  }
+  .plot :global(.tf-chart-tip .swatch.area) {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--muted);
+    opacity: 0.45;
+  }
+  .plot :global(.tf-chart-tip .row.ov) {
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+    padding-top: 2px;
   }
   .plot :global(.tf-chart-tip .val) {
     font-weight: 600;
