@@ -18,6 +18,8 @@
     flag: 'M5 2h2v20H5zm3 1h11l-2.5 4L19 11H8z',
     crosshair: 'M11 2h2v4h-2zm0 16h2v4h-2zM2 11h4v2H2zm16 0h4v2h-4zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
     trash: 'M9 3h6l1 1h4v2H4V4h4zM6 8h12l-1 13H7z',
+    expand: 'M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z',
+    collapse: 'M8 4h2v6H4V8h4zm6 0h2v4h4v2h-6zM4 14h6v6H8v-4H4zm10 0h6v2h-4v4h-2z',
   } as const;
   export type IconName = keyof typeof PATHS;
 </script>

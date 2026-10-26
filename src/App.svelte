@@ -3,7 +3,6 @@
   import Icon from './components/Icon.svelte';
   import MapView from './components/MapView.svelte';
   import Notices from './components/Notices.svelte';
-  import ReplayBar from './components/ReplayBar.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
   import StravaLink from './components/StravaLink.svelte';
   import TrackList from './components/TrackList.svelte';
@@ -121,7 +120,6 @@
           <div class="mapcell">
             <MapView />
           </div>
-          <ReplayBar />
           <ChartsPanel />
         {:else}
           <div class="card nothing">
