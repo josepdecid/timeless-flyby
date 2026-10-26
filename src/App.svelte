@@ -3,15 +3,13 @@
   import Icon from './components/Icon.svelte';
   import MapView from './components/MapView.svelte';
   import Notices from './components/Notices.svelte';
-  import ReplayBar from './components/ReplayBar.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
-  import SplitsTable from './components/SplitsTable.svelte';
   import StravaLink from './components/StravaLink.svelte';
   import TrackList from './components/TrackList.svelte';
   import Welcome from './components/Welcome.svelte';
   import { MAX_TRACKS } from './lib/colors';
   import { ACCEPTED_EXTENSIONS } from './lib/parse';
-  import { app, type Tab, type Theme } from './lib/state.svelte';
+  import { app, type Theme } from './lib/state.svelte';
 
   let fileInput: HTMLInputElement;
   let dragDepth = $state(0);
@@ -37,12 +35,6 @@
   function cycleTheme() {
     app.settings.theme = THEMES[(THEMES.indexOf(app.settings.theme) + 1) % THEMES.length];
   }
-
-  const TABS: { id: Tab; label: string }[] = [
-    { id: 'gap', label: 'Gap' },
-    { id: 'metrics', label: 'Metrics' },
-    { id: 'splits', label: 'Splits' },
-  ];
 </script>
 
 <svelte:window
@@ -75,7 +67,7 @@
   }}
 />
 
-<div class="app">
+<div class="app" class:fit={app.activities.length > 0}>
   <header class="top">
     <div class="brand">
       <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
@@ -128,26 +120,7 @@
           <div class="mapcell">
             <MapView />
           </div>
-          <ReplayBar />
-          <div class="tabs card">
-            <div class="tabbar" role="tablist">
-              {#each TABS as t (t.id)}
-                <button
-                  role="tab"
-                  aria-selected={app.settings.tab === t.id}
-                  class:active={app.settings.tab === t.id}
-                  onclick={() => (app.settings.tab = t.id)}>{t.label}</button
-                >
-              {/each}
-            </div>
-            <div class="tabpanel" role="tabpanel">
-              {#if app.settings.tab === 'splits'}
-                <SplitsTable />
-              {:else}
-                <ChartsPanel mode={app.settings.tab} />
-              {/if}
-            </div>
-          </div>
+          <ChartsPanel />
         {:else}
           <div class="card nothing">
             <p>All activities are excluded. Turn one back on with the <Icon name="eye" size={14} /> button to compare.</p>
@@ -174,6 +147,11 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+  }
+  /* With activities loaded, the map and chart fit the viewport; only the sidebar scrolls. */
+  .app.fit {
+    height: 100vh;
+    height: 100dvh;
   }
   .top {
     display: flex;
@@ -212,15 +190,13 @@
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 16px;
     padding: 16px;
-    align-items: start;
+    min-height: 0;
   }
   .side {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    position: sticky;
-    top: 69px;
-    max-height: calc(100vh - 85px);
+    min-height: 0;
     overflow-y: auto;
     padding-right: 2px;
   }
@@ -251,31 +227,11 @@
     flex-direction: column;
     gap: 12px;
     min-width: 0;
+    min-height: 0;
   }
   .mapcell {
-    height: clamp(340px, 52vh, 640px);
-  }
-  .tabs {
-    padding: 0 12px 16px;
-  }
-  .tabbar {
-    display: flex;
-    gap: 4px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 14px;
-  }
-  .tabbar button {
-    background: none;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 10px 12px 8px;
-    color: var(--text-2);
-    font-weight: 600;
-    margin-bottom: -1px;
-  }
-  .tabbar button.active {
-    color: var(--text);
-    border-bottom-color: var(--accent);
+    flex: 1;
+    min-height: 320px;
   }
   .nothing {
     padding: 24px;
@@ -306,6 +262,9 @@
     color: var(--accent);
   }
   @media (max-width: 900px) {
+    .app.fit {
+      height: auto;
+    }
     .layout {
       grid-template-columns: 1fr;
       padding: 12px 16px;
@@ -318,13 +277,14 @@
     .content {
       order: 1;
     }
+    .mapcell {
+      flex: none;
+      height: 60vh;
+    }
   }
   @media (max-width: 520px) {
     .hide-sm {
       display: none;
-    }
-    .mapcell {
-      height: 60vh;
     }
   }
 </style>

@@ -1,15 +1,21 @@
 <script lang="ts">
   import L from 'leaflet';
   import 'leaflet/dist/leaflet.css';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import { positionAt, snapToRoute } from '../lib/align';
   import { positionAtX, segmentDeltas, type Comparison } from '../lib/analysis';
   import { divergingColor, divergingLegend } from '../lib/colors';
   import { app, type BaseMap, type MapColorMode } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
+  import Icon from './Icon.svelte';
   import Leaderboard from './Leaderboard.svelte';
+  import ReplayBar from './ReplayBar.svelte';
 
   let el: HTMLDivElement;
+  let wrap: HTMLDivElement;
+  let full = $state(false);
+  /** Floating cards at the bottom; their height is kept clear when fitting the route. */
+  let dock: HTMLDivElement | undefined = $state();
   let map = $state.raw<L.Map | null>(null);
   let base: L.TileLayer | null = null;
   const routes = L.layerGroup();
@@ -63,6 +69,19 @@
 
   onDestroy(() => map?.remove());
 
+  // Real fullscreen where the browser allows it; otherwise (iPhone Safari) cover the window.
+  const nativeFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled;
+
+  function toggleFull() {
+    if (!nativeFullscreen) {
+      full = !full;
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      wrap.requestFullscreen().catch(() => (full = true));
+    }
+  }
+
   // Base layer
   $effect(() => {
     if (!map) return;
@@ -87,7 +106,7 @@
       lastFitKey = fitKey;
       const b = L.latLngBounds(cmp.tracks.flatMap((t) => t.activity.points.filter((_, i) => i % 10 === 0).map(ll)));
       map.invalidateSize();
-      if (b.isValid()) map.fitBounds(b, { padding: [40, 40] });
+      if (b.isValid()) map.fitBounds(b, { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40 + untrack(() => dock?.offsetHeight ?? 0)] });
     }
   });
 
@@ -259,7 +278,40 @@
   );
 </script>
 
-<div class="mapwrap">
+<svelte:document onfullscreenchange={() => (full = document.fullscreenElement === wrap)} />
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape' && full && !document.fullscreenElement) full = false;
+  }}
+/>
+
+{#snippet mapControls(where: 'top' | 'docked', tracks: number)}
+<div class="controls card {where}">
+  <div class="seg" role="group" aria-label="Map colouring">
+    <button aria-pressed={app.settings.mapColorMode === 'tracks'} onclick={() => (app.settings.mapColorMode = 'tracks')}>
+      Tracks
+    </button>
+    <button
+      aria-pressed={app.settings.mapColorMode === 'gain'}
+      disabled={tracks < 2}
+      onclick={() => (app.settings.mapColorMode = 'gain')}>Gain / loss</button
+    >
+    <button
+      aria-pressed={app.settings.mapColorMode === 'fastest'}
+      disabled={tracks < 2}
+      onclick={() => (app.settings.mapColorMode = 'fastest')}>Fastest</button
+    >
+  </div>
+  <select class="input" bind:value={app.settings.baseMap} aria-label="Base map">
+    <option value="auto">Map: default</option>
+    <option value="osm">Map: OpenStreetMap</option>
+    <option value="topo">Map: topographic</option>
+    <option value="satellite">Map: satellite</option>
+  </select>
+</div>
+{/snippet}
+
+<div class="mapwrap" class:full bind:this={wrap}>
   <div
     class="map"
     class:muted-tiles={app.settings.baseMap === 'auto' && !app.dark}
@@ -267,60 +319,52 @@
     bind:this={el}
   ></div>
 
-  {#if app.comparison}
-    <div class="controls card">
-      <div class="seg" role="group" aria-label="Map colouring">
-        <button aria-pressed={app.settings.mapColorMode === 'tracks'} onclick={() => (app.settings.mapColorMode = 'tracks')}>
-          Tracks
-        </button>
-        <button
-          aria-pressed={app.settings.mapColorMode === 'gain'}
-          disabled={app.comparison.tracks.length < 2}
-          onclick={() => (app.settings.mapColorMode = 'gain')}>Gain / loss</button
-        >
-        <button
-          aria-pressed={app.settings.mapColorMode === 'fastest'}
-          disabled={app.comparison.tracks.length < 2}
-          onclick={() => (app.settings.mapColorMode = 'fastest')}>Fastest</button
-        >
-      </div>
-      <select class="input" bind:value={app.settings.baseMap} aria-label="Base map">
-        <option value="auto">Map: default</option>
-        <option value="osm">Map: OpenStreetMap</option>
-        <option value="topo">Map: topographic</option>
-        <option value="satellite">Map: satellite</option>
-      </select>
-    </div>
+  <button
+    class="fs"
+    onclick={toggleFull}
+    aria-pressed={full}
+    aria-label={full ? 'Exit fullscreen' : 'Fullscreen map'}
+    title={full ? 'Exit fullscreen (Esc)' : 'Fullscreen map'}
+  >
+    <Icon name={full ? 'collapse' : 'expand'} size={18} />
+  </button>
 
-    {#if app.settings.mapColorMode === 'gain' && app.comparison.tracks.length > 1}
-      <div class="scale card">
-        <div class="scale-title">
-          <select
-            class="input compact"
-            value={app.comparison.tracks[app.focusIndex]?.activity.id}
-            onchange={(e) => (app.session.focusId = e.currentTarget.value)}
-            aria-label="Track compared with the reference"
-          >
-            {#each app.comparison.tracks.slice(1) as tr (tr.activity.id)}
-              <option value={tr.activity.id}>{view.names.get(tr.activity.id)}</option>
-            {/each}
-          </select>
-          <span class="secondary">vs reference</span>
-        </div>
-        <div class="bins">
-          {#each legend as b (b.label)}
-            <div class="bin">
-              <span class="chip" style:background={b.color}></span>
-              <span class="muted">{b.label}</span>
-            </div>
-          {/each}
-        </div>
-        <div class="ends"><span>faster</span><span>slower</span></div>
-        <span class="sr-only">Showing {focusName}</span>
-      </div>
-    {/if}
+  {#if app.comparison}
+    {@render mapControls('top', app.comparison.tracks.length)}
 
     <Leaderboard />
+
+    <div class="dock" bind:this={dock}>
+      {#if app.settings.mapColorMode === 'gain' && app.comparison.tracks.length > 1}
+        <div class="scale card">
+          <div class="scale-title">
+            <select
+              class="input compact"
+              value={app.comparison.tracks[app.focusIndex]?.activity.id}
+              onchange={(e) => (app.session.focusId = e.currentTarget.value)}
+              aria-label="Track compared with the reference"
+            >
+              {#each app.comparison.tracks.slice(1) as tr (tr.activity.id)}
+                <option value={tr.activity.id}>{view.names.get(tr.activity.id)}</option>
+              {/each}
+            </select>
+            <span class="secondary">vs reference</span>
+          </div>
+          <div class="bins">
+            {#each legend as b (b.label)}
+              <div class="bin">
+                <span class="chip" style:background={b.color}></span>
+                <span class="muted">{b.label}</span>
+              </div>
+            {/each}
+          </div>
+          <div class="ends"><span>faster</span><span>slower</span></div>
+          <span class="sr-only">Showing {focusName}</span>
+        </div>
+      {/if}
+      {@render mapControls('docked', app.comparison.tracks.length)}
+      <ReplayBar />
+    </div>
   {/if}
 </div>
 
@@ -337,6 +381,35 @@
     overflow: hidden;
     z-index: 0;
   }
+  .mapwrap.full {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: var(--page);
+  }
+  .mapwrap.full .map {
+    border-radius: 0;
+  }
+  /* Styled like Leaflet's zoom bar, stacked under it. */
+  .fs {
+    position: absolute;
+    top: 82px;
+    left: 10px;
+    z-index: 500;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    background: var(--surface);
+    background-clip: padding-box;
+    color: var(--text-2);
+  }
+  .fs:hover {
+    color: var(--text);
+  }
   .controls {
     position: absolute;
     top: 10px;
@@ -348,6 +421,31 @@
     padding: 4px;
     box-shadow: var(--shadow);
   }
+  /* Bottom cards (gain/loss scale, replay bar) stack here instead of overlapping. */
+  .dock {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    /* Clears Leaflet's attribution line. */
+    bottom: 24px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .dock > :global(*) {
+    pointer-events: auto;
+  }
+  .dock > :global(.bar) {
+    align-self: stretch;
+    box-shadow: var(--shadow);
+  }
+  .controls.docked {
+    display: none;
+    position: static;
+  }
   .controls .input {
     height: 30px;
     font-size: 13px;
@@ -357,10 +455,6 @@
     cursor: default;
   }
   .scale {
-    position: absolute;
-    left: 10px;
-    bottom: 26px;
-    z-index: 500;
     padding: 8px 10px;
     box-shadow: var(--shadow);
     font-size: 12px;
@@ -448,13 +542,11 @@
     border: 1.5px solid var(--text);
   }
   @media (max-width: 640px) {
-    .controls {
-      left: 10px;
-      top: auto;
-      bottom: 26px;
+    .controls.top {
+      display: none;
     }
-    .scale {
-      bottom: 70px;
+    .controls.docked {
+      display: flex;
     }
   }
 </style>

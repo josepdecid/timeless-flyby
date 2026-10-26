@@ -15,7 +15,8 @@ import type { Activity } from './types';
 export type Theme = 'system' | 'light' | 'dark';
 export type MapColorMode = 'tracks' | 'gain' | 'fastest';
 export type BaseMap = 'auto' | 'osm' | 'topo' | 'satellite';
-export type Tab = 'gap' | 'metrics' | 'splits';
+export const STAT_VIEWS = ['ahead', 'speed', 'pace', 'ele', 'hr', 'cad', 'pwr', 'splits'] as const;
+export type StatView = (typeof STAT_VIEWS)[number];
 
 export interface Settings {
   units: Units;
@@ -28,7 +29,8 @@ export interface Settings {
   mapColorMode: MapColorMode;
   replaySpeed: number;
   follow: boolean;
-  tab: Tab;
+  /** What the panel under the map shows. */
+  stat: StatView;
 }
 
 interface Session {
@@ -49,7 +51,7 @@ const DEFAULT_SETTINGS: Settings = {
   mapColorMode: 'tracks',
   replaySpeed: 0,
   follow: false,
-  tab: 'gap',
+  stat: 'ahead',
 };
 
 export interface Notice {
@@ -125,7 +127,10 @@ class AppState {
 
   init() {
     const s = loadSettings<Settings>();
-    if (s) this.settings = { ...DEFAULT_SETTINGS, ...s };
+    if (s) {
+      this.settings = { ...DEFAULT_SETTINGS, ...s };
+      if (!STAT_VIEWS.includes(this.settings.stat)) this.settings.stat = DEFAULT_SETTINGS.stat;
+    }
     const sess = loadSession<Session>();
     if (sess) this.session = { ...this.session, ...sess, passes: sess.passes ?? {} };
     this.activities = loadActivities();

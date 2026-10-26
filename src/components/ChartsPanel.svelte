@@ -1,12 +1,13 @@
 <script lang="ts">
   import Chart, { type ChartSeries } from './Chart.svelte';
   import Legend from './Legend.svelte';
-  import { app } from '../lib/state.svelte';
+  import SplitsTable from './SplitsTable.svelte';
+  import { app, type StatView } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
-  import { distanceValue, elevationValue, fmtGap } from '../lib/format';
+  import { distanceValue, elevationValue, fmtGap, speedFormat } from '../lib/format';
   import type { MetricKey } from '../lib/types';
 
-  let { mode }: { mode: 'gap' | 'metrics' } = $props();
+  const CHART_HEIGHT = 170;
 
   const cmp = $derived(app.comparison);
 
@@ -42,12 +43,84 @@
     }));
   }
 
-  const gapSeries = $derived(seriesFor('ahead'));
-  const speedSeries = $derived(robust(seriesFor('speed', view.speed.value)));
-  const eleSeries = $derived(seriesFor('ele', (v) => elevationValue(v, app.settings.units)));
-  const hrSeries = $derived(seriesFor('hr'));
-  const cadSeries = $derived(seriesFor('cad'));
-  const pwrSeries = $derived(robust(seriesFor('pwr')));
+  const sport = $derived(app.refActivity?.sport ?? '');
+  const speedFmt = $derived(speedFormat('speed', app.settings.units, sport));
+  const paceFmt = $derived(speedFormat('pace', app.settings.units, sport));
+  const eleUnit = $derived(app.settings.units === 'imperial' ? 'ft' : 'm');
+  const round = (v: number) => `${Math.round(v)}`;
+
+  interface ChartSpec {
+    title: string;
+    unit: string;
+    series: ChartSeries[];
+    yFormat: (v: number) => string;
+    invert?: boolean;
+    zeroLine?: boolean;
+    timeTicks?: boolean;
+  }
+
+  // Only the selected chart's series are computed.
+  const spec: ChartSpec | null = $derived.by(() => {
+    switch (active) {
+      case 'ahead':
+        return {
+          title: 'Time ahead of the reference',
+          unit: 'above zero = ahead, below = behind',
+          series: seriesFor('ahead'),
+          yFormat: fmtGap,
+          zeroLine: true,
+          timeTicks: true,
+        };
+      case 'speed':
+        return { title: 'Speed', unit: speedFmt.unit, series: robust(seriesFor('speed', speedFmt.value)), yFormat: speedFmt.label };
+      case 'pace':
+        return {
+          title: 'Pace',
+          unit: paceFmt.unit,
+          series: robust(seriesFor('speed', paceFmt.value)),
+          yFormat: paceFmt.label,
+          invert: true,
+          timeTicks: true,
+        };
+      case 'ele':
+        return {
+          title: 'Elevation',
+          unit: eleUnit,
+          series: seriesFor('ele', (v) => elevationValue(v, app.settings.units)),
+          yFormat: round,
+        };
+      case 'hr':
+        return { title: 'Heart rate', unit: 'bpm', series: seriesFor('hr'), yFormat: round };
+      case 'cad':
+        return { title: 'Cadence', unit: 'rpm / spm', series: seriesFor('cad'), yFormat: round };
+      case 'pwr':
+        return { title: 'Power', unit: 'W', series: robust(seriesFor('pwr')), yFormat: round };
+      default:
+        return null;
+    }
+  });
+
+  const has = (key: MetricKey) => !!cmp?.tracks.some((tr) => tr.metrics[key]);
+  const multi = $derived((cmp?.tracks.length ?? 0) > 1);
+
+  /** Optional metrics only appear when some file carries them. */
+  const options: { id: StatView; label: string; disabled?: boolean }[] = $derived(
+    [
+      { id: 'ahead' as const, label: 'Time ahead', disabled: !multi },
+      { id: 'speed' as const, label: 'Speed' },
+      { id: 'pace' as const, label: 'Pace' },
+      has('ele') && { id: 'ele' as const, label: 'Elevation' },
+      has('hr') && { id: 'hr' as const, label: 'Heart rate' },
+      has('cad') && { id: 'cad' as const, label: 'Cadence' },
+      has('pwr') && { id: 'pwr' as const, label: 'Power' },
+      { id: 'splits' as const, label: 'Splits' },
+    ].filter((o) => !!o),
+  );
+
+  /** The stored choice, unless it isn't available for the current files. */
+  const active: StatView = $derived(
+    options.some((o) => o.id === app.settings.stat && !o.disabled) ? app.settings.stat : app.speedMode,
+  );
 
   /** Replay position per activity id, in display distance units. */
   const markers = $derived(
@@ -68,123 +141,45 @@
       app.clock = t;
     }
   }
-
-  const speedLabel = $derived(view.speed.mode === 'pace' ? 'Pace' : 'Speed');
-  const eleUnit = $derived(app.settings.units === 'imperial' ? 'ft' : 'm');
 </script>
 
 {#if cmp}
-  <div class="panel">
-    <Legend />
-    {#if mode === 'gap'}
-      {#if cmp.tracks.length < 2}
-        <p class="muted hint">Add another activity to see where time was gained or lost.</p>
-      {:else}
+  <div class="panel card">
+    <div class="head">
+      <select
+        class="input"
+        value={active}
+        onchange={(e) => (app.settings.stat = e.currentTarget.value as StatView)}
+        aria-label="Stat to show"
+      >
+        {#each options as o (o.id)}
+          <option value={o.id} disabled={o.disabled}>{o.label}{o.disabled ? ' (needs 2+ activities)' : ''}</option>
+        {/each}
+      </select>
+      <Legend />
+    </div>
+    <div class="body" style:--chart-h="{CHART_HEIGHT}px">
+      {#if active === 'splits'}
+        <SplitsTable />
+      {:else if spec}
         <Chart
-          title="Time ahead of the reference"
-          unit="above zero = ahead, below = behind"
+          title={spec.title}
+          unit={spec.unit}
           x={view.x}
-          series={gapSeries}
-          yFormat={fmtGap}
+          series={spec.series}
+          yFormat={spec.yFormat}
           xFormat={view.xFormat}
-          height={260}
-          zeroLine
-          timeTicks
-          markers={markersFor(gapSeries)}
+          height={CHART_HEIGHT}
+          invert={spec.invert}
+          zeroLine={spec.zeroLine}
+          timeTicks={spec.timeTicks}
+          markers={markersFor(spec.series)}
           onhover={hover}
           onclick={seek}
         />
+        <p class="muted foot">Hover to see everyone at that point on the map · click to jump the replay there</p>
       {/if}
-      <Chart
-        title={speedLabel}
-        unit={view.speed.unit}
-        x={view.x}
-        series={speedSeries}
-        yFormat={view.speed.label}
-        xFormat={view.xFormat}
-        height={170}
-        invert={view.speed.mode === 'pace'}
-        timeTicks={view.speed.mode === 'pace'}
-        markers={markersFor(speedSeries)}
-        onhover={hover}
-        onclick={seek}
-      />
-    {:else}
-      <Chart
-        title={speedLabel}
-        unit={view.speed.unit}
-        x={view.x}
-        series={speedSeries}
-        yFormat={view.speed.label}
-        xFormat={view.xFormat}
-        height={170}
-        invert={view.speed.mode === 'pace'}
-        timeTicks={view.speed.mode === 'pace'}
-        markers={markersFor(speedSeries)}
-        onhover={hover}
-        onclick={seek}
-      />
-      {#if eleSeries.length}
-        <Chart
-          title="Elevation"
-          unit={eleUnit}
-          x={view.x}
-          series={eleSeries}
-          yFormat={(v) => `${Math.round(v)}`}
-          xFormat={view.xFormat}
-          height={150}
-          markers={markersFor(eleSeries)}
-          onhover={hover}
-          onclick={seek}
-        />
-      {/if}
-      {#if hrSeries.length}
-        <Chart
-          title="Heart rate"
-          unit="bpm"
-          x={view.x}
-          series={hrSeries}
-          yFormat={(v) => `${Math.round(v)}`}
-          xFormat={view.xFormat}
-          height={150}
-          markers={markersFor(hrSeries)}
-          onhover={hover}
-          onclick={seek}
-        />
-      {/if}
-      {#if cadSeries.length}
-        <Chart
-          title="Cadence"
-          unit="rpm / spm"
-          x={view.x}
-          series={cadSeries}
-          yFormat={(v) => `${Math.round(v)}`}
-          xFormat={view.xFormat}
-          height={150}
-          markers={markersFor(cadSeries)}
-          onhover={hover}
-          onclick={seek}
-        />
-      {/if}
-      {#if pwrSeries.length}
-        <Chart
-          title="Power"
-          unit="W"
-          x={view.x}
-          series={pwrSeries}
-          yFormat={(v) => `${Math.round(v)}`}
-          xFormat={view.xFormat}
-          height={150}
-          markers={markersFor(pwrSeries)}
-          onhover={hover}
-          onclick={seek}
-        />
-      {/if}
-      {#if !eleSeries.length && !hrSeries.length && !cadSeries.length && !pwrSeries.length}
-        <p class="muted hint">These files carry no elevation, heart rate, cadence or power data.</p>
-      {/if}
-    {/if}
-    <p class="muted foot">Hover to see everyone at that point on the map · click to jump the replay there</p>
+    </div>
   </div>
 {/if}
 
@@ -192,13 +187,22 @@
   .panel {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px;
+    padding: 10px 12px 8px;
   }
-  .hint {
-    margin: 8px 4px;
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+  }
+  /* Fixed height so switching views never resizes the map above. */
+  .body {
+    height: calc(var(--chart-h) + 44px);
+    overflow-y: auto;
   }
   .foot {
     font-size: 12px;
-    margin: 0 4px;
+    margin: 2px 4px 0;
   }
 </style>
