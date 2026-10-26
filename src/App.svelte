@@ -81,7 +81,7 @@
         <path d="M4 21c4-9 8-12 11-8s7 1 13-8" fill="none" stroke="var(--accent)" stroke-width="3.2" stroke-linecap="round" />
         <path d="M4 27c4-9 8-12 11-8s7 1 13-8" fill="none" stroke="#eb6834" stroke-width="3.2" stroke-linecap="round" />
       </svg>
-      <span class="name">Timeless Flyby</span>
+      <h1 class="name">Timeless Flyby</h1>
     </div>
     <div class="tools">
       {#if app.activities.length}
@@ -191,6 +191,7 @@
     gap: 8px;
   }
   .brand .name {
+    margin: 0;
     font-weight: 700;
     font-size: 15px;
     letter-spacing: -0.01em;
