@@ -50,5 +50,8 @@ npm run samples   # regenerate the synthetic demo files in public/samples/
 sub-folder of another site). Browsers won't run ES modules from `file://`, so serve it over HTTP, e.g.
 `npm run preview` or `python3 -m http.server -d dist`.
 
+Every push to `main` is type-checked, tested, built and deployed to GitHub Pages at
+<https://josepdecid.com/timeless-flyby/> by `.github/workflows/deploy.yml`.
+
 Stack: Vite, Svelte 5, TypeScript, Leaflet (OpenStreetMap tiles), uPlot, and the Garmin FIT SDK, which is
 lazy-loaded only when a FIT file is opened.
