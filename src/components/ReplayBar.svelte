@@ -65,7 +65,7 @@
 {#if app.comparison}
   <div class="bar card">
     <button class="btn primary icon" onclick={toggle} aria-label={app.playing ? 'Pause replay' : 'Play replay'} title="Space">
-      <Icon name={app.playing ? 'pause' : 'play'} />
+      <Icon name={app.playing ? 'pause' : 'play'} size={14} />
     </button>
     <button
       class="btn ghost icon"
@@ -76,7 +76,7 @@
       aria-label="Back to start"
       disabled={app.clock === 0}
     >
-      <Icon name="restart" />
+      <Icon name="restart" size={14} />
     </button>
     <span class="clock num"><strong>{fmtDuration(app.clock)}</strong><span class="muted"> / {fmtDuration(max)}</span></span>
     <input
@@ -109,13 +109,23 @@
   .bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
+    gap: 6px;
+    padding: 6px;
     flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .bar .btn.icon {
+    width: 28px;
+    height: 28px;
+  }
+  .bar .input {
+    height: 28px;
+    font-size: 12px;
+    padding: 0 6px;
   }
   .clock {
-    min-width: 120px;
-    font-size: 13px;
+    min-width: 104px;
+    font-size: 12px;
   }
   .scrub {
     flex: 1 1 200px;
@@ -125,8 +135,8 @@
   .opt {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
+    gap: 5px;
+    font-size: 12px;
   }
   .check {
     color: var(--text-2);

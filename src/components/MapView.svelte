@@ -53,7 +53,9 @@
   }
 
   onMount(() => {
-    const m = L.map(el, { preferCanvas: true, zoomControl: true, attributionControl: true }).setView([41.39, 2.17], 12);
+    // Attribution goes top-right so the bottom cards can sit as close to the edge as the sides.
+    const m = L.map(el, { preferCanvas: true, zoomControl: true, attributionControl: false }).setView([41.39, 2.17], 12);
+    L.control.attribution({ position: 'topright' }).addTo(m);
     // Runner and hover markers get their own pane above the route lines, which are redrawn often.
     m.createPane('tf-markers').style.zIndex = '450';
     markerRenderer = L.canvas({ pane: 'tf-markers' });
@@ -425,8 +427,7 @@
     position: absolute;
     left: 12px;
     right: 12px;
-    /* Clears Leaflet's attribution line. */
-    bottom: 24px;
+    bottom: 12px;
     z-index: 500;
     display: flex;
     flex-direction: column;
