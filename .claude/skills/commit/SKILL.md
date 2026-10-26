@@ -80,6 +80,7 @@ Use one scope only; never combine them as `(map,charts)`.
 | `storage`  | `storage.ts`: localStorage encoding, keys, quota handling, persistence                            |
 | `format`   | `format.ts`: units, pace/speed, durations, distance and date formatting, sport defaults           |
 | `samples`  | `synth.ts`, `scripts/make-samples.mjs`, `public/samples/*`: synthetic tracks and bundled demo files |
+| `strava`   | `strava.ts`, `StravaLink.svelte`: Strava activity-link parsing and the GPX export shortcut        |
 
 ### UI (`src/components/`, `src/App.svelte`, `src/app.css`)
 

@@ -6,6 +6,7 @@
   import ReplayBar from './components/ReplayBar.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
   import SplitsTable from './components/SplitsTable.svelte';
+  import StravaLink from './components/StravaLink.svelte';
   import TrackList from './components/TrackList.svelte';
   import Welcome from './components/Welcome.svelte';
   import { MAX_TRACKS } from './lib/colors';
@@ -113,6 +114,7 @@
             <button class="add" onclick={browse} disabled={app.loading}>
               {app.loading ? 'Reading…' : '+ Drop or add more files'}
             </button>
+            <StravaLink compact />
           {/if}
         </section>
         <section>
