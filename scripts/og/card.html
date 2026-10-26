@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- Social preview card (1200×630). Rendered to public/og-image.png by scripts/make-og.mjs. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      :root {
+        --page: #0d0d0d;
+        --surface: #1a1a19;
+        --surface-3: #2c2c2a;
+        --text: #f0efec;
+        --text-2: #c3c2b7;
+        --muted: #898781;
+        --blue: #3987e5;
+        --orange: #eb6834;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: var(--page);
+        color: var(--text);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        position: relative;
+        width: 1200px;
+        height: 630px;
+        background:
+          radial-gradient(640px 480px at 900px 300px, rgba(57, 135, 229, 0.13), transparent 70%),
+          radial-gradient(520px 400px at 1100px 620px, rgba(235, 104, 52, 0.08), transparent 70%),
+          var(--page);
+      }
+      svg.art {
+        position: absolute;
+        inset: 0;
+      }
+      .copy {
+        position: absolute;
+        left: 72px;
+        top: 72px;
+        bottom: 64px;
+        width: 560px;
+        display: flex;
+        flex-direction: column;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .brand .name {
+        font-size: 34px;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+      }
+      h1 {
+        margin: 54px 0 0;
+        font-size: 64px;
+        line-height: 1.04;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+      }
+      h1 .then {
+        color: var(--orange);
+      }
+      .lead {
+        margin: 22px 0 0;
+        font-size: 24px;
+        line-height: 1.4;
+        color: var(--text-2);
+        max-width: 500px;
+      }
+      .foot {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .chip {
+        font-size: 17px;
+        font-weight: 600;
+        padding: 7px 13px;
+        border-radius: 999px;
+        background: var(--surface);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-2);
+        letter-spacing: 0.02em;
+      }
+      .url {
+        margin-left: 10px;
+        font-size: 18px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <svg class="art" width="1200" height="630" viewBox="0 0 1200 630">
+        <defs>
+          <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="1.3" fill="#ffffff" fill-opacity="0.06" />
+          </pattern>
+          <linearGradient id="fade" x1="0" x2="1">
+            <stop offset="0.42" stop-color="#fff" stop-opacity="0" />
+            <stop offset="0.62" stop-color="#fff" stop-opacity="1" />
+          </linearGradient>
+          <mask id="right">
+            <rect width="1200" height="630" fill="url(#fade)" />
+          </mask>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="8" />
+          </filter>
+        </defs>
+
+        <rect width="1200" height="630" fill="url(#dots)" mask="url(#right)" />
+
+        <!-- Route: casing, then gain/loss colouring (dash segments of a 1000-unit path). -->
+        <g id="route" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path id="path" pathLength="1000" stroke="#000" stroke-opacity="0.5" stroke-width="26"
+            d="M680 540 C 760 560, 800 500, 810 440 S 830 330, 930 320 S 1090 330, 1110 240 S 1060 100, 960 86 S 860 70, 820 60" />
+        </g>
+
+        <!-- Gap pill and markers are placed along the path by the script below. -->
+        <g id="markers"></g>
+
+        <!-- Start flag -->
+        <g transform="translate(680 540)">
+          <circle r="11" fill="#0d0d0d" stroke="#f0efec" stroke-width="4" />
+        </g>
+      </svg>
+
+      <div class="copy">
+        <div class="brand">
+          <svg width="52" height="52" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="7" fill="#1a1a19" />
+            <path d="M5 22c4-9 8-12 11-8s7 1 11-8" fill="none" stroke="#3987e5" stroke-width="3" stroke-linecap="round" />
+            <path d="M5 26c4-9 8-12 11-8s7 1 11-8" fill="none" stroke="#d95926" stroke-width="3" stroke-linecap="round" />
+          </svg>
+          <span class="name">Timeless Flyby</span>
+        </div>
+        <h1>Race your <span class="then">past self</span> on the same route.</h1>
+        <p class="lead">Replay activities recorded months apart as if you all started together.</p>
+        <div class="foot">
+          <span class="chip">GPX</span>
+          <span class="chip">TCX</span>
+          <span class="chip">FIT</span>
+          <span class="url">josepdecid.com/timeless-flyby</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const NS = 'http://www.w3.org/2000/svg';
+      const path = document.getElementById('path');
+      const route = document.getElementById('route');
+      const markers = document.getElementById('markers');
+      const d = path.getAttribute('d');
+
+      const el = (tag, attrs, parent) => {
+        const n = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+        parent.appendChild(n);
+        return n;
+      };
+
+      // Diverging dark palette from src/lib/colors.ts: faster = blue, slower = red, grey = even.
+      const stretches = [
+        [0, 60, '#6b6a66'],
+        [60, 150, '#3987e5'],
+        [150, 215, '#6da7ec'],
+        [215, 265, '#d03b3b'],
+        [265, 320, '#6b6a66'],
+        [320, 410, '#3987e5'],
+        [410, 470, '#9ec5f4'],
+        [470, 1000, '#383835'],
+      ];
+      for (const [a, b, color] of stretches) {
+        el('path', { d, pathLength: 1000, stroke: color, 'stroke-width': 14, 'stroke-dasharray': `0 ${a} ${b - a} 2000` }, route);
+      }
+
+      const L = path.getTotalLength();
+      const at = (t) => path.getPointAtLength(L * t);
+
+      const marker = (t, color, label, dx, dy) => {
+        const p = at(t);
+        el('circle', { cx: p.x, cy: p.y, r: 26, fill: color, 'fill-opacity': 0.45, filter: 'url(#glow)' }, markers);
+        el('circle', { cx: p.x, cy: p.y, r: 15, fill: color, stroke: '#0d0d0d', 'stroke-width': 5 }, markers);
+        const g = el('g', { transform: `translate(${p.x + dx} ${p.y + dy})` }, markers);
+        const text = el('text', { x: 16, y: 25, fill: '#f0efec', 'font-size': 20, 'font-weight': 600, 'font-family': 'system-ui, sans-serif' }, g);
+        text.textContent = label;
+        const w = text.getComputedTextLength() + 32;
+        const bg = el('rect', { width: w, height: 38, rx: 19, fill: '#1a1a19', stroke: color, 'stroke-width': 2 }, g);
+        g.insertBefore(bg, text);
+        return { p, w };
+      };
+
+      marker(0.47, '#3987e5', 'Today', -40, -64);
+      marker(0.36, '#eb6834', 'March', -118, -62);
+
+      // Gap pill under the stretch between the two markers.
+      const mid = at(0.415);
+      const gap = el('g', {}, markers);
+      const pill = el('rect', { height: 40, rx: 20, fill: '#3987e5' }, gap);
+      const gt = el('text', { y: 27, 'text-anchor': 'middle', fill: '#fff', 'font-size': 21, 'font-weight': 700, 'font-family': 'system-ui, sans-serif' }, gap);
+      gt.textContent = '1:18 ahead';
+      const gw = gt.getComputedTextLength() + 32;
+      pill.setAttribute('width', gw);
+      gt.setAttribute('x', gw / 2);
+      gap.setAttribute('transform', `translate(${mid.x - gw / 2} ${mid.y + 32})`);
+
+      // Finish flag at the end of the path.
+      const end = at(1);
+      const f = el('g', { transform: `translate(${end.x} ${end.y})` }, markers);
+      el('circle', { r: 11, fill: '#0d0d0d', stroke: '#898781', 'stroke-width': 4 }, f);
+
+      document.body.dataset.ready = '1';
+    </script>
+  </body>
+</html>

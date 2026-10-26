@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
-    "samples": "node scripts/make-samples.mjs"
+    "samples": "node scripts/make-samples.mjs",
+    "og": "node scripts/make-og.mjs"
   },
   "dependencies": {
     "@garmin/fitsdk": "^21.218.0",

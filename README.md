@@ -44,6 +44,7 @@ npm test          # alignment, parser and FIT round-trip tests
 npm run check     # svelte-check / TypeScript
 npm run build     # static site in dist/
 npm run samples   # regenerate the synthetic demo files in public/samples/
+npm run og        # re-render public/og-image.png and apple-touch-icon.png (needs Chrome)
 ```
 
 `dist/` is plain static files with relative paths, so it can be hosted anywhere (GitHub Pages, Netlify, S3, a

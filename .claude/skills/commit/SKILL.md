@@ -92,7 +92,7 @@ Use one scope only; never combine them as `(map,charts)`.
 | `tracks`   | `TrackList.svelte`: activity list, rename, include/exclude, reference, pass select        |
 | `settings` | `SettingsPanel.svelte`: time mode, speed mode, section reset, clear all                   |
 | `theme`    | `app.css`, `colors.ts`, `Icon.svelte`: design tokens, light/dark mode, palettes, icons    |
-| `ui`       | `App.svelte`, `Welcome.svelte`, `Notices.svelte`, `index.html`, `main.ts`: layout, header, tabs, drag-and-drop, welcome screen, notices |
+| `ui`       | `App.svelte`, `Welcome.svelte`, `Notices.svelte`, `index.html`, `main.ts`, `scripts/make-og.mjs`, `scripts/og/*`: layout, header, tabs, drag-and-drop, welcome screen, notices, SEO/social meta and preview card |
 
 ### Tooling
 

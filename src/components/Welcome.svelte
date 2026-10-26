@@ -7,7 +7,7 @@
 
 <section class="welcome">
   <div class="inner">
-    <h1>Race your past self, or anyone else, on the same route.</h1>
+    <h2>Race your past self, or anyone else, on the same route.</h2>
     <p class="secondary lead">
       Drop two or more GPX, TCX or FIT files. Each one is aligned to the same start line and replayed as if everyone set off
       together, so you can see where you gained or lost time, even months apart.
@@ -41,7 +41,7 @@
     max-width: 640px;
     width: 100%;
   }
-  h1 {
+  h2 {
     font-size: 26px;
     line-height: 1.2;
     margin: 0 0 10px;
