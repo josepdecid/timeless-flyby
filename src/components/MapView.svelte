@@ -372,7 +372,6 @@
   .mapwrap {
     position: relative;
     height: 100%;
-    min-height: 320px;
   }
   .map {
     position: absolute;

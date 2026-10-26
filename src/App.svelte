@@ -9,7 +9,7 @@
   import Welcome from './components/Welcome.svelte';
   import { MAX_TRACKS } from './lib/colors';
   import { ACCEPTED_EXTENSIONS } from './lib/parse';
-  import { app, type Theme } from './lib/state.svelte';
+  import { app, DEFAULT_CHART_HEIGHT, type Theme } from './lib/state.svelte';
 
   let fileInput: HTMLInputElement;
   let dragDepth = $state(0);
@@ -28,6 +28,41 @@
 
   function hasFiles(e: DragEvent) {
     return e.dataTransfer?.types.includes('Files') ?? false;
+  }
+
+  // Map/chart divider. The map keeps at least MAP_MIN; the chart card at least CHART_MIN.
+  const MAP_MIN = 240;
+  const CHART_MIN = 220;
+  const DIVIDER = 12;
+  let content: HTMLDivElement | undefined = $state();
+  let dragFrom: { y: number; h: number } | null = $state(null);
+
+  function chartMax() {
+    return Math.max(CHART_MIN, (content?.clientHeight ?? 0) - MAP_MIN - DIVIDER);
+  }
+  function setChartHeight(h: number) {
+    app.settings.chartHeight = Math.round(Math.min(chartMax(), Math.max(CHART_MIN, h)));
+  }
+  function dragStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Start from what's on screen; a stale saved height may be capped by the viewport.
+    const shown = Math.min(app.settings.chartHeight, chartMax());
+    dragFrom = { y: e.clientY, h: shown };
+  }
+  function dragMove(e: PointerEvent) {
+    if (dragFrom) setChartHeight(dragFrom.h + dragFrom.y - e.clientY);
+  }
+  function dragKey(e: KeyboardEvent) {
+    const step = e.shiftKey ? 80 : 20;
+    const current = Math.min(app.settings.chartHeight, chartMax());
+    if (e.key === 'ArrowUp') setChartHeight(current + step);
+    else if (e.key === 'ArrowDown') setChartHeight(current - step);
+    else if (e.key === 'Home') setChartHeight(chartMax());
+    else if (e.key === 'End') setChartHeight(CHART_MIN);
+    else return;
+    e.preventDefault();
   }
 
   const THEMES: Theme[] = ['system', 'light', 'dark'];
@@ -115,11 +150,28 @@
         </section>
       </aside>
 
-      <div class="content">
+      <div class="content" class:dragging={!!dragFrom} bind:this={content} style:--map-min="{MAP_MIN + DIVIDER}px">
         {#if app.comparison}
           <div class="mapcell">
             <MapView />
           </div>
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+          <div
+            class="divider"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize map and chart"
+            aria-valuenow={app.settings.chartHeight}
+            aria-valuemin={CHART_MIN}
+            title="Drag to resize · double-click to reset"
+            tabindex="0"
+            onpointerdown={dragStart}
+            onpointermove={dragMove}
+            onpointerup={() => (dragFrom = null)}
+            onpointercancel={() => (dragFrom = null)}
+            ondblclick={() => setChartHeight(DEFAULT_CHART_HEIGHT)}
+            onkeydown={dragKey}
+          ></div>
           <ChartsPanel />
         {:else}
           <div class="card nothing">
@@ -225,13 +277,42 @@
   .content {
     display: flex;
     flex-direction: column;
-    gap: 12px;
     min-width: 0;
     min-height: 0;
   }
+  .content.dragging {
+    cursor: row-resize;
+    user-select: none;
+  }
   .mapcell {
     flex: 1;
-    min-height: 320px;
+    min-height: 240px;
+  }
+  /* A slim grip line in a taller hit area between the map and the chart. */
+  .divider {
+    flex: none;
+    height: 12px;
+    cursor: row-resize;
+    touch-action: none;
+    display: grid;
+    place-items: center;
+    outline: none;
+  }
+  .divider::before {
+    content: '';
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    transition:
+      background 0.15s,
+      width 0.15s;
+  }
+  .divider:hover::before,
+  .divider:focus-visible::before,
+  .content.dragging .divider::before {
+    width: 64px;
+    background: var(--accent);
   }
   .nothing {
     padding: 24px;
@@ -280,6 +361,17 @@
     .mapcell {
       flex: none;
       height: 60vh;
+    }
+    /* Stacked layout scrolls, so there's nothing to share; a fixed chart height instead. */
+    .content {
+      gap: 12px;
+    }
+    .divider {
+      display: none;
+    }
+    .content :global(.panel:not(.full)) {
+      height: 300px;
+      max-height: none;
     }
   }
   @media (max-width: 520px) {

@@ -18,6 +18,8 @@ export type BaseMap = 'auto' | 'osm' | 'topo' | 'satellite';
 export const STAT_VIEWS = ['ahead', 'speed', 'pace', 'ele', 'hr', 'cad', 'pwr', 'splits'] as const;
 export type StatView = (typeof STAT_VIEWS)[number];
 
+export const DEFAULT_CHART_HEIGHT = 280;
+
 export interface Settings {
   units: Units;
   speedMode: 'auto' | SpeedMode;
@@ -33,6 +35,8 @@ export interface Settings {
   stat: StatView;
   /** Draw the elevation profile behind the other charts. */
   eleOverlay: boolean;
+  /** Height of the chart card under the map, in px; dragged with the divider. */
+  chartHeight: number;
 }
 
 interface Session {
@@ -55,6 +59,7 @@ const DEFAULT_SETTINGS: Settings = {
   follow: false,
   stat: 'ahead',
   eleOverlay: false,
+  chartHeight: DEFAULT_CHART_HEIGHT,
 };
 
 export interface Notice {

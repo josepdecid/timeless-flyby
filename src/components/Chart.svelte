@@ -28,7 +28,6 @@
     series,
     yFormat,
     xFormat,
-    height = 180,
     invert = false,
     zeroLine = false,
     timeTicks = false,
@@ -44,7 +43,6 @@
     series: ChartSeries[];
     yFormat: (v: number) => string;
     xFormat: (v: number) => string;
-    height?: number;
     /** Draw higher values lower (pace: lower is faster, so faster stays up). */
     invert?: boolean;
     zeroLine?: boolean;
@@ -239,8 +237,7 @@
       font: '11px system-ui, sans-serif',
     };
     const opts: uPlot.Options = {
-      width: el.clientWidth,
-      height,
+      ...size(),
       legend: { show: false },
       cursor: {
         sync: { key: 'tf-distance' },
@@ -306,18 +303,23 @@
     plot = new uPlot(opts, data, el);
   }
 
+  /** The plot fills its container, which the layout sizes (panel height, fullscreen). */
+  function size() {
+    return { width: el.clientWidth, height: Math.max(80, el.clientHeight) };
+  }
+
   onMount(() => {
     ro = new ResizeObserver(() => {
-      if (plot && el.clientWidth > 0 && Math.abs(plot.width - el.clientWidth) > 1) {
-        plot.setSize({ width: el.clientWidth, height });
-      }
+      if (!plot || el.clientWidth <= 0) return;
+      const next = size();
+      if (Math.abs(plot.width - next.width) > 1 || Math.abs(plot.height - next.height) > 1) plot.setSize(next);
     });
     ro.observe(el);
   });
 
   $effect(() => {
     // Track everything that changes the plot's structure.
-    void [x, series, height, invert, overlay, app.dark];
+    void [x, series, invert, overlay, app.dark];
     build();
   });
 
@@ -344,6 +346,9 @@
   .chart {
     margin: 0;
     min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
   figcaption {
     display: flex;
@@ -355,7 +360,10 @@
     font-weight: 600;
     font-size: 13px;
   }
+  /* Zero basis so the canvas never feeds back into the size it's measured from. */
   .plot {
+    flex: 1 1 0;
+    min-height: 0;
     width: 100%;
     position: relative;
   }
