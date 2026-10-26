@@ -8,6 +8,10 @@ track.
 Everything runs in the browser. Files are never uploaded; activities and settings are kept in
 `localStorage` so they survive a reload.
 
+Have a Strava link instead of a file? Paste it and the app gives you a one-click link to that activity's GPX
+export on Strava. Strava doesn't allow other sites to download activity files, so you still save the file and
+drop it in, but you skip digging through Strava's menus.
+
 ## Features
 
 - **Replay** on the map with live standings, play/pause/scrub, 1×–600× speed and follow-the-leader.

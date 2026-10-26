@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte';
   import Icon from './Icon.svelte';
+  import StravaLink from './StravaLink.svelte';
 
   let { onbrowse }: { onbrowse: () => void } = $props();
 </script>
@@ -17,6 +18,9 @@
       <strong>Drop activity files here</strong>
       <span class="muted">or click to browse · .gpx .tcx .fit · up to 8</span>
     </button>
+    <div class="strava-wrap">
+      <StravaLink />
+    </div>
     <div class="alt">
       <button class="btn" onclick={() => app.loadSamples()} disabled={app.loading}>Try sample activities</button>
       <span class="muted">Your files are processed in this browser. Nothing is uploaded.</span>
@@ -69,6 +73,9 @@
   }
   .drop :global(svg) {
     color: var(--accent);
+  }
+  .strava-wrap {
+    margin-top: 14px;
   }
   .alt {
     display: flex;
