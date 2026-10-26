@@ -42,7 +42,8 @@
 <style>
   .board {
     position: absolute;
-    top: 10px;
+    /* Below the map attribution line in the corner. */
+    top: 26px;
     right: 10px;
     z-index: 500;
     width: 270px;

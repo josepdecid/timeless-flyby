@@ -1,13 +1,12 @@
 <script lang="ts">
-  import Chart, { type ChartSeries } from './Chart.svelte';
+  import Chart, { type ChartOverlay, type ChartSeries } from './Chart.svelte';
+  import Icon from './Icon.svelte';
   import Legend from './Legend.svelte';
   import SplitsTable from './SplitsTable.svelte';
   import { app, type StatView } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
   import { distanceValue, elevationValue, fmtGap, speedFormat } from '../lib/format';
   import type { MetricKey } from '../lib/types';
-
-  const CHART_HEIGHT = 170;
 
   const cmp = $derived(app.comparison);
 
@@ -122,12 +121,41 @@
     options.some((o) => o.id === app.settings.stat && !o.disabled) ? app.settings.stat : app.speedMode,
   );
 
+  /** Elevation can sit behind any other chart; it's the same route, so one profile is enough. */
+  const canOverlay = $derived(has('ele') && active !== 'ele' && active !== 'splits');
+  const overlay: ChartOverlay | null = $derived.by(() => {
+    if (!cmp || !canOverlay || !app.settings.eleOverlay) return null;
+    const tr = cmp.tracks.find((t) => t.activity.id === cmp.refId && t.metrics.ele) ?? cmp.tracks.find((t) => t.metrics.ele);
+    if (!tr) return null;
+    return {
+      label: 'Elevation',
+      values: tr.metrics.ele!.map((v) => (v == null ? null : elevationValue(v, app.settings.units))),
+      format: (v) => `${Math.round(v)} ${eleUnit}`,
+    };
+  });
+
   /** Replay position per activity id, in display distance units. */
   const markers = $derived(
     new Map(view.replayActive ? view.replay.map((r) => [r.id, distanceValue(r.x, app.settings.units)]) : []),
   );
   function markersFor(list: ChartSeries[]) {
     return markers.size ? list.map((s) => markers.get(s.id) ?? null) : [];
+  }
+
+  let panel: HTMLDivElement | undefined = $state();
+  let full = $state(false);
+
+  // Same approach as the map: real fullscreen where allowed, otherwise cover the window.
+  const nativeFullscreen = typeof document !== 'undefined' && document.fullscreenEnabled;
+
+  function toggleFull() {
+    if (!nativeFullscreen) {
+      full = !full;
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      panel?.requestFullscreen().catch(() => (full = true));
+    }
   }
 
   function hover(idx: number | null) {
@@ -143,8 +171,15 @@
   }
 </script>
 
+<svelte:document onfullscreenchange={() => (full = !!panel && document.fullscreenElement === panel)} />
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape' && full && !document.fullscreenElement) full = false;
+  }}
+/>
+
 {#if cmp}
-  <div class="panel card">
+  <div class="panel card" class:full bind:this={panel} style:--panel-h="{app.settings.chartHeight}px">
     <div class="head">
       <select
         class="input"
@@ -156,9 +191,24 @@
           <option value={o.id} disabled={o.disabled}>{o.label}{o.disabled ? ' (needs 2+ activities)' : ''}</option>
         {/each}
       </select>
+      {#if canOverlay}
+        <label class="check">
+          <input type="checkbox" bind:checked={app.settings.eleOverlay} />
+          <span>Elevation</span>
+        </label>
+      {/if}
       <Legend />
+      <button
+        class="btn ghost icon fs"
+        onclick={toggleFull}
+        aria-pressed={full}
+        aria-label={full ? 'Exit fullscreen' : 'Fullscreen chart'}
+        title={full ? 'Exit fullscreen (Esc)' : 'Fullscreen chart'}
+      >
+        <Icon name={full ? 'collapse' : 'expand'} size={18} />
+      </button>
     </div>
-    <div class="body" style:--chart-h="{CHART_HEIGHT}px">
+    <div class="body" class:scroll={active === 'splits'}>
       {#if active === 'splits'}
         <SplitsTable />
       {:else if spec}
@@ -169,11 +219,11 @@
           series={spec.series}
           yFormat={spec.yFormat}
           xFormat={view.xFormat}
-          height={CHART_HEIGHT}
           invert={spec.invert}
           zeroLine={spec.zeroLine}
           timeTicks={spec.timeTicks}
           markers={markersFor(spec.series)}
+          {overlay}
           onhover={hover}
           onclick={seek}
         />
@@ -184,11 +234,37 @@
 {/if}
 
 <style>
+  /* The divider in App sets the height; the max keeps room for the map above. */
   .panel {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 10px 12px 8px;
+    height: var(--panel-h);
+    max-height: calc(100% - var(--map-min, 0px));
+    min-height: 0;
+    flex: none;
+  }
+  .panel.full {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    height: auto;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    padding: 14px 18px 12px;
+  }
+  /* Native fullscreen sizes the element itself. */
+  .panel:fullscreen {
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    padding: 14px 18px 12px;
+  }
+  .fs {
+    margin-left: auto;
+    color: var(--text-2);
   }
   .head {
     display: flex;
@@ -196,10 +272,32 @@
     align-items: center;
     gap: 8px 16px;
   }
-  /* Fixed height so switching views never resizes the map above. */
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+  }
+  .check input {
+    accent-color: var(--accent);
+  }
+  /* Takes the panel's remaining height, so switching views never resizes the map above. */
   .body {
-    height: calc(var(--chart-h) + 44px);
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .body.scroll {
+    display: block;
     overflow-y: auto;
+  }
+  .body > :global(.chart) {
+    flex: 1 1 0;
+    min-height: 0;
   }
   .foot {
     font-size: 12px;
