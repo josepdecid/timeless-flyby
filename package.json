@@ -1,0 +1,30 @@
+{
+  "name": "timeless-flyby",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "samples": "node scripts/make-samples.mjs"
+  },
+  "dependencies": {
+    "@garmin/fitsdk": "^21.218.0",
+    "leaflet": "^1.9.4",
+    "uplot": "^1.6.32"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/leaflet": "^1.9.22",
+    "happy-dom": "^21.0.4",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.7",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
