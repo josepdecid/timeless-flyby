@@ -18,6 +18,8 @@
   }
 
   function commitName(id: string, value: string) {
+    // Removing the input can fire a late blur after Enter/Escape already settled the edit.
+    if (editing !== id) return;
     const a = app.activities.find((x) => x.id === id);
     if (a && value.trim()) a.name = value.trim();
     editing = null;
@@ -45,13 +47,16 @@
               }}
             />
           {:else}
-            <button class="name" title="Rename" ondblclick={() => (editing = a.id)} onclick={() => (editing = a.id)}>
+            <button class="name" title="Rename" onclick={() => (editing = a.id)}>
               {a.name}
             </button>
           {/if}
           <div class="meta muted">{sportLabel(a.sport)} · {fmtDateTime(a.points[0].t)}</div>
         </div>
         <div class="actions">
+          <button class="btn ghost icon" onclick={() => (editing = a.id)} aria-label="Rename {a.name}" title="Rename">
+            <Icon name="edit" />
+          </button>
           <button
             class="btn ghost icon"
             onclick={() => (a.included = !a.included)}
