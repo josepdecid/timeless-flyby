@@ -2,10 +2,18 @@
   import L from 'leaflet';
   import 'leaflet/dist/leaflet.css';
   import { onDestroy, onMount, untrack } from 'svelte';
-  import { positionAt, snapToRoute } from '../lib/align';
-  import { positionAtX, segmentDeltas, type Comparison } from '../lib/analysis';
+  import { matchOnRoute, positionAt, snapToRoute } from '../lib/align';
+  import { positionAtX, routeBetween, segmentStats, type Comparison } from '../lib/analysis';
   import { divergingColor, divergingLegend } from '../lib/colors';
-  import { app, type BaseMap, type MapColorMode } from '../lib/state.svelte';
+  import {
+    app,
+    clampCount,
+    MAX_EVEN_SEGMENTS,
+    SEGMENT_LENGTHS,
+    type BaseMap,
+    type MapColorMode,
+    type MapSegment,
+  } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
   import Icon from './Icon.svelte';
   import Leaderboard from './Leaderboard.svelte';
@@ -21,6 +29,7 @@
   const routes = L.layerGroup();
   const flags = L.layerGroup();
   const hover = L.layerGroup();
+  const segEdit = L.layerGroup();
   const runners = L.layerGroup();
   let runnerMarkers = new Map<string, L.CircleMarker>();
   let markerRenderer: L.Renderer;
@@ -62,6 +71,7 @@
     map = m;
     routes.addTo(map);
     flags.addTo(map);
+    segEdit.addTo(map);
     hover.addTo(map);
     runners.addTo(map);
     const ro = new ResizeObserver(() => map?.invalidateSize());
@@ -98,10 +108,11 @@
     const cmp = app.comparison;
     const mode = app.settings.mapColorMode;
     const focus = app.focusIndex;
+    const segments = app.mapSegments;
     void app.dark;
     void view.colors;
     if (!map) return;
-    drawRoutes(cmp, mode, focus);
+    drawRoutes(cmp, mode, focus, segments);
     drawFlags(cmp);
     const fitKey = cmp ? `${cmp.refId}|${cmp.tracks.map((t) => t.activity.id).join(',')}` : '';
     if (cmp && fitKey !== lastFitKey) {
@@ -112,7 +123,7 @@
     }
   });
 
-  function drawRoutes(cmp: Comparison | null, mode: MapColorMode, focus: number) {
+  function drawRoutes(cmp: Comparison | null, mode: MapColorMode, focus: number, segments: MapSegment[]) {
     routes.clearLayers();
     if (!cmp) return;
     const casing = css('--surface');
@@ -133,30 +144,33 @@
     }
     if (mode === 'tracks' || cmp.tracks.length < 2) return;
 
-    // Colour the reference line segment by segment.
-    const segLen = Math.min(1000, Math.max(50, cmp.length / 120));
-    const segs = segmentDeltas(cmp, focus, segLen);
+    // Colour the reference line segment by segment; custom segments may leave gaps, drawn as casing only.
     L.polyline(cmp.routeAt.map(ll), { color: casing, weight: 9, opacity: 0.95, interactive: false }).addTo(routes);
-    for (const s of segs) {
-      const line = cmp.routeAt.slice(s.from, s.to + 1).map(ll);
+    const stats = segmentStats(cmp, segments);
+    stats.forEach((s, i) => {
+      const tk = s.times[focus];
+      const t0 = s.times[0];
+      // Relative time difference vs the reference; positive = slower.
+      const rel = tk != null && t0 != null && t0 > 0 ? (tk - t0) / t0 : NaN;
       const color =
         mode === 'gain'
-          ? divergingColor(s.rel, dark)
+          ? divergingColor(rel, dark)
           : s.fastest >= 0
             ? (view.colors.get(cmp.tracks[s.fastest].activity.id) ?? '#888')
             : css('--muted');
       const tip =
         mode === 'gain'
-          ? Number.isFinite(s.rel)
-            ? `${Math.abs(s.rel * 100).toFixed(1)}% ${s.rel > 0 ? 'slower' : 'faster'} than the reference`
+          ? Number.isFinite(rel)
+            ? `${Math.abs(rel * 100).toFixed(1)}% ${rel > 0 ? 'slower' : 'faster'} than the reference`
             : 'Not covered'
           : s.fastest >= 0
             ? `Fastest: ${view.names.get(cmp.tracks[s.fastest].activity.id)}`
             : '';
-      L.polyline(line, { color, weight: 6, opacity: 1, lineCap: 'butt' })
-        .bindTooltip(tip, { sticky: true, className: 'tf-tip' })
+      const name = segments[i].name;
+      L.polyline(routeBetween(cmp, s.from, s.to).map(ll), { color, weight: 6, opacity: 1, lineCap: 'butt' })
+        .bindTooltip(name ? `<strong>${escapeHtml(name)}</strong><br>${tip}` : tip, { sticky: true, className: 'tf-tip' })
         .addTo(routes);
-    }
+    });
   }
 
   function flagIcon(kind: 'start' | 'finish') {
@@ -197,6 +211,65 @@
     make('start', cmp.section.startD);
     make('finish', cmp.section.endD);
   }
+
+  function escapeHtml(text: string) {
+    return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  }
+
+  // Custom segments, while the Segments tab is open: each one outlined, the selected one with
+  // draggable ends that slide along the reference route.
+  $effect(() => {
+    const cmp = app.comparison;
+    const placed = app.placedSegments;
+    const selected = app.selectedSegment;
+    const editing = app.settings.stat === 'segments';
+    void app.dark;
+    segEdit.clearLayers();
+    if (!map || !cmp || !editing) return;
+    const accent = css('--accent');
+    const casing = css('--surface');
+    for (const { segment, range } of placed) {
+      if (!range) continue;
+      const isSel = segment.id === selected;
+      const pts = routeBetween(cmp, range.from, range.to).map(ll);
+      L.polyline(pts, { color: casing, weight: isSel ? 12 : 9, opacity: 0.9, interactive: false }).addTo(segEdit);
+      const line = L.polyline(pts, {
+        color: accent,
+        weight: isSel ? 7 : 4,
+        opacity: isSel ? 1 : 0.7,
+        dashArray: isSel ? undefined : '6 6',
+        lineCap: 'butt',
+      })
+        .bindTooltip(escapeHtml(segment.name), { sticky: true, className: 'tf-tip' })
+        .on('click', () => (app.selectedSegment = segment.id))
+        .addTo(segEdit);
+      if (!isSel) continue;
+      const ends = { from: range.from, to: range.to };
+      const handle = (which: 'from' | 'to') => {
+        const m = L.marker(ll(positionAt(cmp.ref, cmp.section.startD + ends[which])), {
+          icon: L.divIcon({ className: 'tf-seg-end', html: '<i></i>', iconSize: [0, 0], iconAnchor: [0, 0] }),
+          draggable: true,
+          keyboard: true,
+          title: `Drag to move the segment ${which === 'from' ? 'start' : 'end'} along the reference route`,
+          zIndexOffset: 900,
+        });
+        m.on('drag', () => {
+          const p = m.getLatLng();
+          const q = { lat: p.lat, lon: p.lng };
+          // Stay on the same pass of a loop while the pointer is near the route.
+          const d = matchOnRoute(cmp.ref, q, cmp.section.startD + ends[which], 60) ?? snapToRoute(cmp.ref, q);
+          const x = Math.min(cmp.length, Math.max(0, d - cmp.section.startD));
+          ends[which] = which === 'from' ? Math.min(x, ends.to - 5) : Math.max(x, ends.from + 5);
+          m.setLatLng(ll(positionAt(cmp.ref, cmp.section.startD + ends[which])));
+          line.setLatLngs(routeBetween(cmp, ends.from, ends.to).map(ll));
+        });
+        m.on('dragend', () => app.moveSegment(segment.id, ends.from, ends.to));
+        m.addTo(segEdit);
+      };
+      handle('from');
+      handle('to');
+    }
+  });
 
   // Replay markers
   $effect(() => {
@@ -304,6 +377,45 @@
       onclick={() => (app.settings.mapColorMode = 'fastest')}>Fastest</button
     >
   </div>
+  {#if app.settings.mapColorMode !== 'tracks' && tracks > 1}
+    <div class="segctl">
+      <select class="input" bind:value={app.settings.segmentMode} aria-label="How the route is split for colouring">
+        <option value="even">Even splits</option>
+        <option value="distance">By distance</option>
+        <option value="custom">Custom segments</option>
+      </select>
+      {#if app.settings.segmentMode === 'even'}
+        <input
+          class="input count num"
+          type="number"
+          min="1"
+          max={MAX_EVEN_SEGMENTS}
+          value={app.settings.segmentCount}
+          onchange={(e) => {
+            app.settings.segmentCount = clampCount(e.currentTarget.valueAsNumber);
+            e.currentTarget.value = String(app.settings.segmentCount);
+          }}
+          aria-label="Number of even splits (up to {MAX_EVEN_SEGMENTS})"
+          title="Number of even splits (up to {MAX_EVEN_SEGMENTS})"
+        />
+      {:else if app.settings.segmentMode === 'distance'}
+        <select
+          class="input"
+          value={app.segmentLength}
+          onchange={(e) => (app.settings.segmentLength = +e.currentTarget.value)}
+          aria-label="Split length"
+        >
+          {#each SEGMENT_LENGTHS[app.settings.units] as [v, label] (v)}
+            <option value={v}>Every {label}</option>
+          {/each}
+        </select>
+      {:else}
+        <button class="btn" onclick={() => (app.settings.stat = 'segments')}>
+          {app.mapSegments.length ? `${app.mapSegments.length} on route` : 'None yet'} · Edit
+        </button>
+      {/if}
+    </div>
+  {/if}
   <select class="input" bind:value={app.settings.baseMap} aria-label="Base map">
     <option value="auto">Map: default</option>
     <option value="osm">Map: OpenStreetMap</option>
@@ -446,9 +558,17 @@
     display: none;
     position: static;
   }
-  .controls .input {
+  .controls .input,
+  .controls .btn {
     height: 30px;
     font-size: 13px;
+  }
+  .segctl {
+    display: flex;
+    gap: 6px;
+  }
+  .input.count {
+    width: 64px;
   }
   .seg button:disabled {
     opacity: 0.45;
@@ -500,6 +620,17 @@
   }
   .dark-tiles :global(.leaflet-tile-pane) {
     filter: invert(1) hue-rotate(180deg) grayscale(0.8) brightness(0.85) contrast(0.9);
+  }
+  :global(.tf-seg-end i) {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 3px solid var(--accent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    cursor: grab;
   }
   /* Start label sits up-left of its pin and Finish up-right, so they don't collide on loops. */
   :global(.tf-flag i) {

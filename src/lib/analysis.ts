@@ -2,15 +2,16 @@ import {
   alignTrack,
   buildRoute,
   detectCommonSection,
+  matchOnRoute,
   positionAt,
   snapToRoute,
   type AlignedTrack,
   type RefRoute,
   type Section,
 } from './align';
-import { interp, lerp, locate } from './geo';
+import { interp, lerp, locate, upperBound } from './geo';
 import { movingMask } from './motion';
-import type { Activity, LatLon, MetricKey, TrackPoint } from './types';
+import type { Activity, CustomSegment, LatLon, MetricKey, TrackPoint } from './types';
 
 export type TimeMode = 'elapsed' | 'moving';
 
@@ -284,9 +285,7 @@ export interface Split {
 
 export function computeSplits(cmp: Comparison, splitLength: number): Split[] {
   const out: Split[] = [];
-  const bounds: number[] = [];
-  for (let x = splitLength; x < cmp.length - 1; x += splitLength) bounds.push(x);
-  bounds.push(cmp.length);
+  const bounds = distanceRanges(cmp.length, splitLength).map((r) => r.to);
   let prev = 0;
   const prevT = cmp.tracks.map(() => 0 as number | null);
   bounds.forEach((to, index) => {
@@ -303,43 +302,77 @@ export function computeSplits(cmp: Comparison, splitLength: number): Split[] {
   return out;
 }
 
-export interface SegmentDelta {
-  from: number; // grid index
+/** A stretch of the section, metres from its start. */
+export interface SegmentRange {
+  from: number;
   to: number;
-  /** For 'vs reference': relative time difference (positive = slower than the reference). */
-  rel: number;
-  /** For 'fastest': index into cmp.tracks of the quickest track here, -1 if none. */
-  fastest: number;
 }
 
-export function segmentDeltas(cmp: Comparison, trackIndex: number, segLength: number): SegmentDelta[] {
-  const step = cmp.grid[1] ?? 1;
-  const m = Math.max(1, Math.round(segLength / step));
-  const out: SegmentDelta[] = [];
-  const tr = cmp.tracks[trackIndex];
-  const ref = cmp.tracks[0];
-  for (let a = 0; a < cmp.grid.length - 1; a += m) {
-    const b = Math.min(a + m, cmp.grid.length - 1);
-    let rel = NaN;
-    if (tr) {
-      const dk = diff(tr.time, a, b);
-      const dr = diff(ref.time, a, b);
-      if (dk != null && dr != null && dr > 0) rel = (dk - dr) / dr;
-    }
-    let fastest = -1;
-    let best = Infinity;
-    cmp.tracks.forEach((t, k) => {
-      const dt = diff(t.time, a, b);
-      if (dt != null && dt < best) {
-        best = dt;
-        fastest = k;
-      }
-    });
-    out.push({ from: a, to: b, rel, fastest });
+/** `count` equal stretches covering the whole section. */
+export function evenRanges(length: number, count: number): SegmentRange[] {
+  const n = Math.max(1, Math.round(count));
+  return Array.from({ length: n }, (_, i) => ({ from: (length * i) / n, to: (length * (i + 1)) / n }));
+}
+
+/** Stretches of `step` metres from the start; the last one takes whatever is left. */
+export function distanceRanges(length: number, step: number): SegmentRange[] {
+  const out: SegmentRange[] = [];
+  let from = 0;
+  for (let x = step; x < length - 1; x += step) {
+    out.push({ from, to: x });
+    from = x;
   }
+  out.push({ from, to: length });
   return out;
 }
 
-function diff(s: Series, a: number, b: number): number | null {
-  return s[a] == null || s[b] == null ? null : s[b]! - s[a]!;
+export interface SegmentStat extends SegmentRange {
+  /** Per track (same order as cmp.tracks): seconds spent on the stretch, or null if not covered. */
+  times: (number | null)[];
+  /** Index into cmp.tracks of the quickest track here, -1 if none. */
+  fastest: number;
+}
+
+export function segmentStats(cmp: Comparison, ranges: SegmentRange[]): SegmentStat[] {
+  return ranges.map(({ from, to }) => {
+    const times = cmp.tracks.map((tr) => {
+      const a = elapsedAt(cmp, tr, from);
+      const b = elapsedAt(cmp, tr, to);
+      return a == null || b == null ? null : b - a;
+    });
+    let fastest = -1;
+    times.forEach((t, k) => {
+      if (t != null && (fastest < 0 || t < times[fastest]!)) fastest = k;
+    });
+    return { from, to, times, fastest };
+  });
+}
+
+/** The reference line between two points of the section, for drawing a stretch on the map. */
+export function routeBetween(cmp: Comparison, from: number, to: number): LatLon[] {
+  const at = (x: number) => positionAt(cmp.ref, cmp.section.startD + x);
+  const out = [at(from)];
+  for (let j = upperBound(cmp.grid, from); j < cmp.grid.length && cmp.grid[j] < to; j++) out.push(cmp.routeAt[j]);
+  out.push(at(to));
+  return out;
+}
+
+/** Where a saved segment lies on this comparison's section, or null when it isn't on it. */
+export function placeSegment(cmp: Comparison, seg: CustomSegment): SegmentRange | null {
+  const a = matchOnRoute(cmp.ref, seg.start, seg.near[0]);
+  const b = matchOnRoute(cmp.ref, seg.end, seg.near[1]);
+  if (a == null || b == null) return null;
+  // A few metres of slack, so a segment dragged right onto the start or finish still counts.
+  const slack = 10;
+  const from = a - cmp.section.startD;
+  const to = b - cmp.section.startD;
+  if (from < -slack || to > cmp.length + slack || to - from < 1) return null;
+  return { from: Math.max(0, from), to: Math.min(cmp.length, to) };
+}
+
+/** Geometry to save for a segment covering `from`–`to` metres of the section. */
+export function segmentGeometry(cmp: Comparison, from: number, to: number): Pick<CustomSegment, 'start' | 'end' | 'near'> {
+  const a = cmp.section.startD + from;
+  const b = cmp.section.startD + to;
+  return { start: positionAt(cmp.ref, a), end: positionAt(cmp.ref, b), near: [a, b] };
 }

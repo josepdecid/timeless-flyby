@@ -2,6 +2,7 @@
   import Chart, { type ChartOverlay, type ChartSeries } from './Chart.svelte';
   import Icon from './Icon.svelte';
   import Legend from './Legend.svelte';
+  import SegmentsTable from './SegmentsTable.svelte';
   import SplitsTable from './SplitsTable.svelte';
   import { app, type StatView } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
@@ -113,6 +114,7 @@
       has('cad') && { id: 'cad' as const, label: 'Cadence' },
       has('pwr') && { id: 'pwr' as const, label: 'Power' },
       { id: 'splits' as const, label: 'Splits' },
+      { id: 'segments' as const, label: 'Segments' },
     ].filter((o) => !!o),
   );
 
@@ -122,7 +124,8 @@
   );
 
   /** Elevation can sit behind any other chart; it's the same route, so one profile is enough. */
-  const canOverlay = $derived(has('ele') && active !== 'ele' && active !== 'splits');
+  const tabular = $derived(active === 'splits' || active === 'segments');
+  const canOverlay = $derived(has('ele') && active !== 'ele' && !tabular);
   const overlay: ChartOverlay | null = $derived.by(() => {
     if (!cmp || !canOverlay || !app.settings.eleOverlay) return null;
     const tr = cmp.tracks.find((t) => t.activity.id === cmp.refId && t.metrics.ele) ?? cmp.tracks.find((t) => t.metrics.ele);
@@ -208,9 +211,11 @@
         <Icon name={full ? 'collapse' : 'expand'} size={18} />
       </button>
     </div>
-    <div class="body" class:scroll={active === 'splits'}>
+    <div class="body" class:scroll={tabular}>
       {#if active === 'splits'}
         <SplitsTable />
+      {:else if active === 'segments'}
+        <SegmentsTable />
       {:else if spec}
         <Chart
           title={spec.title}

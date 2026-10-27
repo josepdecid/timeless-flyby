@@ -5,6 +5,7 @@ const KEYS = {
   settings: 'tf:settings:v1',
   session: 'tf:session:v1',
   activities: 'tf:activities:v1',
+  segments: 'tf:segments:v1',
 };
 
 function read<T>(key: string): T | null {
@@ -35,6 +36,8 @@ export const loadSettings = <T>() => read<Partial<T>>(KEYS.settings);
 export const saveSettings = (s: unknown) => write(KEYS.settings, s);
 export const loadSession = <T>() => read<Partial<T>>(KEYS.session);
 export const saveSession = (s: unknown) => write(KEYS.session, s);
+export const loadSegments = <T>() => read<T[]>(KEYS.segments);
+export const saveSegments = (s: unknown) => write(KEYS.segments, s);
 
 /**
  * Compact column encoding: integers, delta-coded where values change slowly. Roughly 15–20

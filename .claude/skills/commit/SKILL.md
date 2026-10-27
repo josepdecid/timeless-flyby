@@ -90,6 +90,7 @@ Use one scope only; never combine them as `(map,charts)`.
 | `charts`   | `Chart.svelte`, `ChartsPanel.svelte`, `Legend.svelte`: uPlot charts, gap and metric charts, tooltips, sync |
 | `replay`   | `ReplayBar.svelte`, `Leaderboard.svelte`: playback controls, speed, keyboard, live standings |
 | `splits`   | `SplitsTable.svelte`: split table UI                                                      |
+| `segments` | `SegmentsTable.svelte`: custom segments tab (create, edit, delete, per-segment times)     |
 | `tracks`   | `TrackList.svelte`: activity list, rename, include/exclude, reference, pass select        |
 | `settings` | `SettingsPanel.svelte`: time mode, speed mode, section reset, clear all                   |
 | `theme`    | `app.css`, `colors.ts`, `Icon.svelte`: design tokens, light/dark mode, palettes, icons    |
