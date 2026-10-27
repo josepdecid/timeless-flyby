@@ -7,6 +7,7 @@
   import { app, type StatView } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
   import { distanceValue, elevationValue, fmtGap, speedFormat } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import type { MetricKey } from '../lib/types';
 
   const cmp = $derived(app.comparison);
@@ -20,7 +21,7 @@
         const isRef = tr.activity.id === cmp.refId;
         return {
           id: tr.activity.id,
-          label: (view.names.get(tr.activity.id) ?? tr.activity.name) + (isRef && key === 'ahead' ? ' (reference)' : ''),
+          label: (view.names.get(tr.activity.id) ?? tr.activity.name) + (isRef && key === 'ahead' ? t.charts.referenceSuffix : ''),
           color: view.colors.get(tr.activity.id) ?? '#888',
           values: raw.map((v) => (v == null ? null : transform(v))),
         };
@@ -64,18 +65,18 @@
     switch (active) {
       case 'ahead':
         return {
-          title: 'Time ahead of the reference',
-          unit: 'above zero = ahead, below = behind',
+          title: t.charts.timeAheadTitle,
+          unit: t.charts.timeAheadUnit,
           series: seriesFor('ahead'),
           yFormat: fmtGap,
           zeroLine: true,
           timeTicks: true,
         };
       case 'speed':
-        return { title: 'Speed', unit: speedFmt.unit, series: robust(seriesFor('speed', speedFmt.value)), yFormat: speedFmt.label };
+        return { title: t.charts.speed, unit: speedFmt.unit, series: robust(seriesFor('speed', speedFmt.value)), yFormat: speedFmt.label };
       case 'pace':
         return {
-          title: 'Pace',
+          title: t.charts.pace,
           unit: paceFmt.unit,
           series: robust(seriesFor('speed', paceFmt.value)),
           yFormat: paceFmt.label,
@@ -84,17 +85,17 @@
         };
       case 'ele':
         return {
-          title: 'Elevation',
+          title: t.charts.elevation,
           unit: eleUnit,
           series: seriesFor('ele', (v) => elevationValue(v, app.settings.units)),
           yFormat: round,
         };
       case 'hr':
-        return { title: 'Heart rate', unit: 'bpm', series: seriesFor('hr'), yFormat: round };
+        return { title: t.charts.heartRate, unit: 'bpm', series: seriesFor('hr'), yFormat: round };
       case 'cad':
-        return { title: 'Cadence', unit: 'rpm / spm', series: seriesFor('cad'), yFormat: round };
+        return { title: t.charts.cadence, unit: t.charts.cadenceUnit, series: seriesFor('cad'), yFormat: round };
       case 'pwr':
-        return { title: 'Power', unit: 'W', series: robust(seriesFor('pwr')), yFormat: round };
+        return { title: t.charts.power, unit: 'W', series: robust(seriesFor('pwr')), yFormat: round };
       default:
         return null;
     }
@@ -106,15 +107,15 @@
   /** Optional metrics only appear when some file carries them. */
   const options: { id: StatView; label: string; disabled?: boolean }[] = $derived(
     [
-      { id: 'ahead' as const, label: 'Time ahead', disabled: !multi },
-      { id: 'speed' as const, label: 'Speed' },
-      { id: 'pace' as const, label: 'Pace' },
-      has('ele') && { id: 'ele' as const, label: 'Elevation' },
-      has('hr') && { id: 'hr' as const, label: 'Heart rate' },
-      has('cad') && { id: 'cad' as const, label: 'Cadence' },
-      has('pwr') && { id: 'pwr' as const, label: 'Power' },
-      { id: 'splits' as const, label: 'Splits' },
-      { id: 'segments' as const, label: 'Segments' },
+      { id: 'ahead' as const, label: t.charts.timeAhead, disabled: !multi },
+      { id: 'speed' as const, label: t.charts.speed },
+      { id: 'pace' as const, label: t.charts.pace },
+      has('ele') && { id: 'ele' as const, label: t.charts.elevation },
+      has('hr') && { id: 'hr' as const, label: t.charts.heartRate },
+      has('cad') && { id: 'cad' as const, label: t.charts.cadence },
+      has('pwr') && { id: 'pwr' as const, label: t.charts.power },
+      { id: 'splits' as const, label: t.charts.splits },
+      { id: 'segments' as const, label: t.charts.segments },
     ].filter((o) => !!o),
   );
 
@@ -131,7 +132,7 @@
     const tr = cmp.tracks.find((t) => t.activity.id === cmp.refId && t.metrics.ele) ?? cmp.tracks.find((t) => t.metrics.ele);
     if (!tr) return null;
     return {
-      label: 'Elevation',
+      label: t.charts.elevation,
       values: tr.metrics.ele!.map((v) => (v == null ? null : elevationValue(v, app.settings.units))),
       format: (v) => `${Math.round(v)} ${eleUnit}`,
     };
@@ -188,16 +189,16 @@
         class="input"
         value={active}
         onchange={(e) => (app.settings.stat = e.currentTarget.value as StatView)}
-        aria-label="Stat to show"
+        aria-label={t.charts.statAria}
       >
         {#each options as o (o.id)}
-          <option value={o.id} disabled={o.disabled}>{o.label}{o.disabled ? ' (needs 2+ activities)' : ''}</option>
+          <option value={o.id} disabled={o.disabled}>{o.label}{o.disabled ? t.charts.needsTwo : ''}</option>
         {/each}
       </select>
       {#if canOverlay}
         <label class="check">
           <input type="checkbox" bind:checked={app.settings.eleOverlay} />
-          <span>Elevation</span>
+          <span>{t.charts.elevation}</span>
         </label>
       {/if}
       <Legend />
@@ -205,8 +206,8 @@
         class="btn ghost icon fs"
         onclick={toggleFull}
         aria-pressed={full}
-        aria-label={full ? 'Exit fullscreen' : 'Fullscreen chart'}
-        title={full ? 'Exit fullscreen (Esc)' : 'Fullscreen chart'}
+        aria-label={full ? t.common.exitFullscreen : t.charts.fullscreen}
+        title={full ? t.common.exitFullscreenEsc : t.charts.fullscreen}
       >
         <Icon name={full ? 'collapse' : 'expand'} size={18} />
       </button>
@@ -232,7 +233,7 @@
           onhover={hover}
           onclick={seek}
         />
-        <p class="muted foot">Hover to see everyone at that point on the map · click to jump the replay there</p>
+        <p class="muted foot">{t.charts.hoverHint}</p>
       {/if}
     </div>
   </div>

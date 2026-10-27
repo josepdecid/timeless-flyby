@@ -1,3 +1,5 @@
+import { t } from './i18n.svelte';
+
 // Categorical slots from the validated reference palette (fixed order, never cycled).
 export const SERIES_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
 export const SERIES_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767'];
@@ -43,7 +45,7 @@ export function divergingLegend(dark: boolean): { color: string; label: string }
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   return [
     ...p.faster.map((c, i) => ({ color: c, label: `−${pct(DIVERGING_BINS[i])}` })).reverse(),
-    { color: p.neutral, label: 'even' },
+    { color: p.neutral, label: t.map.evenBin },
     ...p.slower.map((c, i) => ({ color: c, label: `+${pct(DIVERGING_BINS[i])}` })),
   ];
 }

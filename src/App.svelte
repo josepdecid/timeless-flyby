@@ -10,6 +10,7 @@
   import TrackList from './components/TrackList.svelte';
   import Welcome from './components/Welcome.svelte';
   import { MAX_TRACKS } from './lib/colors';
+  import { t } from './lib/i18n.svelte';
   import { ACCEPTED_EXTENSIONS } from './lib/parse';
   import { app, DEFAULT_CHART_HEIGHT } from './lib/state.svelte';
 
@@ -25,7 +26,7 @@
     if (!files?.length) return;
     const list = Array.from(files);
     const ok = list.filter((f) => ACCEPTED_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext)));
-    for (const f of list) if (!ok.includes(f)) app.notify('error', `${f.name}: only GPX, TCX and FIT files are supported.`);
+    for (const f of list) if (!ok.includes(f)) app.notify('error', t.app.unsupportedFile(f.name));
     if (ok.length) app.addFiles(ok);
   }
 
@@ -112,19 +113,19 @@
       <aside class="side">
         <section>
           <div class="sechead">
-            <h2>Activities <span class="muted">{app.activities.length}/{MAX_TRACKS}</span></h2>
-            <button class="btn ghost danger" onclick={() => (confirmClear = true)}>Remove all</button>
+            <h2>{t.app.activities} <span class="muted">{app.activities.length}/{MAX_TRACKS}</span></h2>
+            <button class="btn ghost danger" onclick={() => (confirmClear = true)}>{t.app.removeAll}</button>
           </div>
           <TrackList />
           {#if app.activities.length < MAX_TRACKS}
             <button class="add" onclick={browse} disabled={app.loading}>
-              {app.loading ? 'Reading…' : '+ Drop or add more files'}
+              {app.loading ? t.app.reading : t.app.addMore}
             </button>
             <StravaLink compact />
           {/if}
         </section>
         <section>
-          <h2>Comparison</h2>
+          <h2>{t.app.comparison}</h2>
           <SettingsPanel />
         </section>
       </aside>
@@ -139,10 +140,10 @@
             class="divider"
             role="separator"
             aria-orientation="horizontal"
-            aria-label="Resize map and chart"
+            aria-label={t.app.resizeAria}
             aria-valuenow={app.settings.chartHeight}
             aria-valuemin={CHART_MIN}
-            title="Drag to resize · double-click to reset"
+            title={t.app.resizeHint}
             tabindex="0"
             onpointerdown={dragStart}
             onpointermove={dragMove}
@@ -154,7 +155,7 @@
           <ChartsPanel />
         {:else}
           <div class="card nothing">
-            <p>All activities are excluded. Turn one back on with the <Icon name="eye" size={14} /> button to compare.</p>
+            <p>{t.app.allExcludedBefore} <Icon name="eye" size={14} /> {t.app.allExcludedAfter}</p>
           </div>
         {/if}
       </div>
@@ -166,16 +167,13 @@
   <div class="dropzone" aria-hidden="true">
     <div class="dropbox">
       <Icon name="upload" size={32} />
-      <strong>Drop to add activities</strong>
+      <strong>{t.app.dropToAdd}</strong>
     </div>
   </div>
 {/if}
 
-<ConfirmDialog bind:open={confirmClear} title="Remove all activities?" confirmLabel="Remove all" onconfirm={() => app.clearAll()}>
-  <p>
-    {app.activities.length === 1 ? 'The activity' : `All ${app.activities.length} activities`} will be deleted from this
-    browser and can't be recovered. Your custom segments are kept.
-  </p>
+<ConfirmDialog bind:open={confirmClear} title={t.app.removeAllTitle} confirmLabel={t.app.removeAll} onconfirm={() => app.clearAll()}>
+  <p>{t.app.removeAllBody(app.activities.length)}</p>
 </ConfirmDialog>
 
 <Notices />

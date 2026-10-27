@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fmtDistance } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
 
@@ -7,9 +8,9 @@
 </script>
 
 {#if app.comparison && view.standings.length > 1}
-  <section class="board card" aria-label="Standings at the replay time">
+  <section class="board card" aria-label={t.board.aria}>
     <button class="head" onclick={() => (open = !open)} aria-expanded={open}>
-      <span>Standings</span>
+      <span>{t.board.title}</span>
       <span class="muted">{open ? '−' : '+'}</span>
     </button>
     {#if open}
@@ -21,7 +22,7 @@
             <span class="name">{view.names.get(row.tr.activity.id)}</span>
             <span class="gap num">
               {#if row.rank === 1}
-                <span class="secondary">{row.st.finished && row.tr.aligned.finished ? 'finished' : 'leader'}</span>
+                <span class="secondary">{row.st.finished && row.tr.aligned.finished ? t.board.finished : t.board.leader}</span>
               {:else}
                 {row.gap}
               {/if}

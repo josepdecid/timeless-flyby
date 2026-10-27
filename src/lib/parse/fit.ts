@@ -1,4 +1,5 @@
 import type { ParsedActivity, TrackPoint } from '../types';
+import { t } from '../i18n.svelte';
 
 const SEMICIRCLE_TO_DEG = 180 / 2 ** 31;
 
@@ -17,10 +18,10 @@ export async function parseFit(buffer: ArrayBuffer): Promise<ParsedActivity> {
   // The SDK ships the whole FIT profile (~hundreds of KB); only load it when needed.
   const { Decoder, Stream } = await import('@garmin/fitsdk');
   const decoder = new Decoder(Stream.fromArrayBuffer(buffer));
-  if (!decoder.isFIT()) throw new Error('Not a FIT file');
+  if (!decoder.isFIT()) throw new Error(t.parse.notFit);
   const { messages, errors } = decoder.read();
   const records = (messages.recordMesgs ?? []) as FitRecord[];
-  if (!records.length && errors.length) throw new Error(`Could not decode FIT file: ${errors[0]}`);
+  if (!records.length && errors.length) throw new Error(t.parse.fitDecode(String(errors[0])));
 
   const session = (messages.sessionMesgs ?? [])[0] as { sport?: string; subSport?: string } | undefined;
   const sport = session?.sport ?? '';

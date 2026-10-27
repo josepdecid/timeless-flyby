@@ -16,7 +16,7 @@ drop it in, but you skip digging through Strava's menus.
 
 - **Replay** on the map with live standings, play/pause/scrub, 1×–600× speed and follow-the-leader.
 - **Gap chart**: time ahead or behind the reference at every point along the route.
-- **Gain/loss map**: the route coloured by how much faster or slower a track was than the reference, or by
+- **Difference map**: the route coloured by how much faster or slower a track was than the reference, or by
   who was fastest on each stretch. Stretches are even splits (up to 120), a fixed distance, or your own segments.
 - **Splits** of any length, with per-split and cumulative deltas.
 - **Segments**: mark your own stretches (a climb, a sprint) by distance or by dragging their ends on the map,

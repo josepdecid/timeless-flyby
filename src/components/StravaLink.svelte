@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '../lib/i18n.svelte';
   import { parseStravaLink, stravaGpxExportUrl } from '../lib/strava';
   import Icon from './Icon.svelte';
 
@@ -11,13 +12,12 @@
 
 <div class="strava" class:compact>
   <div class="head">
-    <label class="label" for="strava-link-{id}">Have a Strava link?</label>
-    <button class="info" type="button" aria-label="Why a link?" aria-describedby="strava-why-{id}">
+    <label class="label" for="strava-link-{id}">{t.strava.question}</label>
+    <button class="info" type="button" aria-label={t.strava.why} aria-describedby="strava-why-{id}">
       <Icon name="info" size={14} />
     </button>
     <p class="tip" id="strava-why-{id}" role="tooltip">
-      Strava doesn't allow other sites to download activity files, so this can't load it directly. Paste the link to get
-      a one-click GPX download from Strava (you need to be logged in there), then drop the file here.
+      {t.strava.tip}
     </p>
   </div>
   <div class="row">
@@ -38,9 +38,9 @@
     {/if}
   </div>
   {#if result?.kind === 'short'}
-    <p class="hint warn">App share links don't include the activity ID. Open it in a browser and paste the strava.com address instead.</p>
+    <p class="hint warn">{t.strava.short}</p>
   {:else if result?.kind === 'invalid'}
-    <p class="hint warn">That doesn't look like a Strava activity link.</p>
+    <p class="hint warn">{t.strava.invalid}</p>
   {/if}
 </div>
 

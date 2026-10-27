@@ -1,15 +1,16 @@
 <script lang="ts">
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
 </script>
 
 {#if app.comparison && app.comparison.tracks.length > 1}
-  <ul class="legend" aria-label="Legend">
+  <ul class="legend" aria-label={t.legend.aria}>
     {#each app.comparison.tracks as tr (tr.activity.id)}
       <li>
         <span class="swatch line" style:background={view.colors.get(tr.activity.id)}></span>
         <span>{view.names.get(tr.activity.id)}</span>
-        {#if tr.activity.id === app.comparison.refId}<span class="muted">· reference</span>{/if}
+        {#if tr.activity.id === app.comparison.refId}<span class="muted">· {t.common.reference}</span>{/if}
       </li>
     {/each}
   </ul>

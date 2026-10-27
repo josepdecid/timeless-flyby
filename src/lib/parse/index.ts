@@ -1,5 +1,6 @@
 import type { ParsedActivity, TrackPoint } from '../types';
 import { haversine } from '../geo';
+import { t } from '../i18n.svelte';
 import { parseGpx } from './gpx';
 import { parseTcx } from './tcx';
 import { parseFit } from './fit';
@@ -21,7 +22,7 @@ export async function parseFile(file: File): Promise<ParsedActivity> {
   }
   parsed.points = cleanPoints(parsed.points);
   if (parsed.points.length < 2) {
-    throw new Error('No timestamped GPS points found. Comparing needs both position and time data.');
+    throw new Error(t.parse.noPoints);
   }
   return parsed;
 }

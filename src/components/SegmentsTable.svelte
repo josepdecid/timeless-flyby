@@ -1,6 +1,7 @@
 <script lang="ts">
   import { segmentStats, type SegmentStat } from '../lib/analysis';
   import { distanceUnit, distanceValue, fmtDistance, fmtDuration, fmtGap } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
   import Icon from './Icon.svelte';
@@ -65,13 +66,12 @@
 {#if cmp}
   <div class="wrap">
     <div class="toolbar">
-      <button class="btn" onclick={add}>+ Add segment</button>
+      <button class="btn" onclick={add}>{t.segments.add}</button>
       {#if app.settings.segmentMode !== 'custom' && cmp.tracks.length > 1}
-        <button class="btn ghost" onclick={useOnMap} disabled={!app.segments.length}>Colour the map by these</button>
+        <button class="btn ghost" onclick={useOnMap} disabled={!app.segments.length}>{t.segments.colourMap}</button>
       {/if}
       <span class="muted">
-        Select a segment to show it on the map and drag its ends · Δ is relative to the reference ·
-        <strong class="secondary">bold</strong> = fastest
+        {t.segments.hint} <strong class="secondary">{t.common.bold}</strong> {t.segments.fastest}
       </span>
     </div>
     {#if rows.length}
@@ -79,8 +79,8 @@
         <table>
           <thead>
             <tr>
-              <th class="left" colspan="2">Segment</th>
-              <th class="left">From · to ({distanceUnit(units)})</th>
+              <th class="left" colspan="2">{t.segments.segment}</th>
+              <th class="left">{t.segments.fromTo(distanceUnit(units))}</th>
               {#each cmp.tracks as tr (tr.activity.id)}
                 <th colspan="2" class="left trackhead">
                   <span class="swatch line" style:background={view.colors.get(tr.activity.id)}></span>
@@ -91,9 +91,9 @@
             </tr>
             <tr class="sub">
               <th colspan="2"></th>
-              <th class="left muted">length</th>
+              <th class="left muted">{t.segments.length}</th>
               {#each cmp.tracks as tr, k (tr.activity.id)}
-                <th class="muted">time · {view.speed.unit}</th>
+                <th class="muted">{t.common.timeUnit(view.speed.unit)}</th>
                 <th class="muted">{k === 0 ? '' : 'Δ'}</th>
               {/each}
               <th></th>
@@ -109,8 +109,8 @@
                     aria-pressed={selected}
                     disabled={!stat}
                     onclick={() => (app.selectedSegment = selected ? null : segment.id)}
-                    aria-label={selected ? `Hide ${segment.name} on the map` : `Show ${segment.name} on the map`}
-                    title={selected ? 'Hide on the map' : 'Show on the map'}
+                    aria-label={selected ? t.segments.hideNamed(segment.name) : t.segments.showNamed(segment.name)}
+                    title={selected ? t.segments.hide : t.segments.show}
                   >
                     <Icon name="crosshair" size={14} />
                   </button>
@@ -121,7 +121,7 @@
                     value={segment.name}
                     onfocus={() => stat && (app.selectedSegment = segment.id)}
                     onchange={(e) => rename(e, segment.id, segment.name)}
-                    aria-label="Segment name"
+                    aria-label={t.segments.nameAria}
                   />
                 </td>
                 {#if stat}
@@ -134,7 +134,7 @@
                       value={inUnits(stat.from)}
                       onfocus={() => (app.selectedSegment = segment.id)}
                       onchange={(e) => setEnd(e, segment.id, stat, 'from')}
-                      aria-label="{segment.name} start, {distanceUnit(units)} into the section"
+                      aria-label={t.segments.startAria(segment.name, distanceUnit(units))}
                     />
                     <input
                       class="input dist num"
@@ -144,7 +144,7 @@
                       value={inUnits(stat.to)}
                       onfocus={() => (app.selectedSegment = segment.id)}
                       onchange={(e) => setEnd(e, segment.id, stat, 'to')}
-                      aria-label="{segment.name} end, {distanceUnit(units)} into the section"
+                      aria-label={t.segments.endAria(segment.name, distanceUnit(units))}
                     />
                     <span class="muted">{fmtDistance(stat.to - stat.from, units)}</span>
                   </td>
@@ -163,14 +163,14 @@
                     </td>
                   {/each}
                 {:else}
-                  <td class="left muted" colspan={1 + cmp.tracks.length * 2}>Not on the compared section</td>
+                  <td class="left muted" colspan={1 + cmp.tracks.length * 2}>{t.segments.offSection}</td>
                 {/if}
                 <td>
                   <button
                     class="btn ghost icon del"
                     onclick={() => app.removeSegment(segment.id)}
-                    aria-label="Delete {segment.name}"
-                    title="Delete segment"
+                    aria-label={t.segments.deleteNamed(segment.name)}
+                    title={t.segments.delete}
                   >
                     <Icon name="trash" size={14} />
                   </button>
@@ -181,11 +181,9 @@
         </table>
       </div>
     {:else}
-      <p class="muted empty">
-        No segments yet. Add one, then type its start and end or drag them along the route on the map.
-      </p>
+      <p class="muted empty">{t.segments.empty}</p>
     {/if}
-    <p class="muted foot">Saved in this browser, and kept when you load other activities over the same road.</p>
+    <p class="muted foot">{t.segments.saved}</p>
   </div>
 {/if}
 

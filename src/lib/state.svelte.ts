@@ -11,6 +11,7 @@ import {
 } from './analysis';
 import { MAX_TRACKS } from './colors';
 import { defaultSpeedMode, type SpeedMode, type Units } from './format';
+import { browserLocale, i18n, isLocale, t, type Locale } from './i18n.svelte';
 import { parseFile } from './parse';
 import {
   loadActivities,
@@ -26,7 +27,7 @@ import type { Activity, CustomSegment } from './types';
 
 export type Theme = 'system' | 'light' | 'dark';
 export type MapColorMode = 'tracks' | 'gain' | 'fastest';
-export type BaseMap = 'auto' | 'osm' | 'topo' | 'satellite';
+export type BaseMap = 'osm' | 'topo' | 'satellite';
 export type SegmentMode = 'even' | 'distance' | 'custom';
 export const STAT_VIEWS = ['ahead', 'speed', 'pace', 'ele', 'hr', 'cad', 'pwr', 'splits', 'segments'] as const;
 export type StatView = (typeof STAT_VIEWS)[number];
@@ -74,9 +75,11 @@ export interface Settings {
   /** Metres; 0 = automatic (1 km / 1 mi, coarser for long sections). */
   splitLength: number;
   theme: Theme;
+  /** Starts as the browser's language when supported, English otherwise. */
+  language: Locale;
   baseMap: BaseMap;
   mapColorMode: MapColorMode;
-  /** How the gain/loss and fastest map colouring cuts the route into stretches. */
+  /** How the difference and fastest map colouring cuts the route into stretches. */
   segmentMode: SegmentMode;
   /** Stretches in 'even' mode. */
   segmentCount: number;
@@ -96,7 +99,7 @@ interface Session {
   refId: string | null;
   section: SectionOverride | null;
   passes: Record<string, number>;
-  /** Track compared against the reference in "gain/loss" map mode. */
+  /** Track compared against the reference in "difference" map mode. */
   focusId: string | null;
 }
 
@@ -106,7 +109,8 @@ const DEFAULT_SETTINGS: Settings = {
   timeMode: 'elapsed',
   splitLength: 0,
   theme: 'system',
-  baseMap: 'auto',
+  language: browserLocale(),
+  baseMap: 'osm',
   mapColorMode: 'tracks',
   segmentMode: 'even',
   segmentCount: MAX_EVEN_SEGMENTS,
@@ -204,7 +208,7 @@ class AppState {
     return this.segments.map((segment) => ({ segment, range: cmp ? placeSegment(cmp, segment) : null }));
   });
 
-  /** Stretches the gain/loss and fastest map modes colour. */
+  /** Stretches the difference and fastest map modes colour. */
   mapSegments: MapSegment[] = $derived.by(() => {
     const cmp = this.comparison;
     if (!cmp) return [];
@@ -224,8 +228,13 @@ class AppState {
       this.settings = { ...DEFAULT_SETTINGS, ...s };
       if (!STAT_VIEWS.includes(this.settings.stat)) this.settings.stat = DEFAULT_SETTINGS.stat;
       if (!['even', 'distance', 'custom'].includes(this.settings.segmentMode)) this.settings.segmentMode = 'even';
+      // Also catches the retired 'auto' (OSM toned down by CSS).
+      if (!['osm', 'topo', 'satellite'].includes(this.settings.baseMap)) this.settings.baseMap = 'osm';
       this.settings.segmentCount = clampCount(this.settings.segmentCount);
+      if (!isLocale(this.settings.language)) this.settings.language = browserLocale();
     }
+    // Set now rather than in the effect below so the first render is already in the right language.
+    i18n.locale = this.settings.language;
     const sess = loadSession<Session>();
     if (sess) this.session = { ...this.session, ...sess, passes: sess.passes ?? {} };
     this.activities = loadActivities();
@@ -255,6 +264,11 @@ class AppState {
         if (this.settings.theme === 'system') root.removeAttribute('data-theme');
         else root.setAttribute('data-theme', this.settings.theme);
       });
+      $effect(() => {
+        i18n.locale = this.settings.language;
+        document.documentElement.lang = i18n.locale;
+        document.title = t.meta.title;
+      });
       // A new comparison invalidates the replay position.
       $effect(() => {
         void this.comparison;
@@ -279,7 +293,7 @@ class AppState {
     try {
       for (const file of files) {
         if (this.activities.length >= MAX_TRACKS) {
-          this.notify('error', `Up to ${MAX_TRACKS} activities can be compared at once; skipped ${file.name}.`);
+          this.notify('error', t.app.tooMany(MAX_TRACKS, file.name));
           continue;
         }
         try {
@@ -297,7 +311,7 @@ class AppState {
             included: true,
           });
         } catch (e) {
-          this.notify('error', `${file.name}: ${e instanceof Error ? e.message : 'could not be read'}`);
+          this.notify('error', t.app.unreadable(file.name, e instanceof Error ? e.message : t.app.couldNotRead));
         }
       }
     } finally {
@@ -346,9 +360,9 @@ class AppState {
     if (!cmp) return;
     const used = new Set(this.segments.map((g) => g.name));
     let n = this.segments.length + 1;
-    while (used.has(`Segment ${n}`)) n++;
+    while (used.has(t.segments.defaultName(n))) n++;
     const id = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    this.segments.push({ id, name: `Segment ${n}`, ...segmentGeometry(cmp, from, to) });
+    this.segments.push({ id, name: t.segments.defaultName(n), ...segmentGeometry(cmp, from, to) });
     this.selectedSegment = id;
   }
 

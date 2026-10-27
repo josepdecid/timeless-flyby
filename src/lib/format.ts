@@ -1,3 +1,5 @@
+import { i18n, t } from './i18n.svelte';
+
 export type Units = 'metric' | 'imperial';
 export type SpeedMode = 'pace' | 'speed';
 
@@ -13,9 +15,9 @@ export function defaultSpeedMode(sport: string): SpeedMode {
 }
 
 export function sportLabel(sport: string): string {
-  if (!sport) return 'Activity';
+  if (!sport) return t.common.activity;
   const s = sport.replace(/[_-]+/g, ' ').trim().toLowerCase();
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return t.sports[s] ?? s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export function fmtDistance(m: number, units: Units, digits?: number): string {
@@ -96,11 +98,11 @@ export function elevationValue(m: number, units: Units): number {
 }
 
 export function fmtDate(t: number): string {
-  return new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(t).toLocaleDateString(i18n.locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export function fmtDateTime(t: number): string {
-  return new Date(t).toLocaleString(undefined, {
+  return new Date(t).toLocaleString(i18n.locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

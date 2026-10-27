@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { t } from '../lib/i18n.svelte';
 
   let {
     open = $bindable(false),
@@ -39,7 +40,7 @@
     <div class="msg">{@render children()}</div>
     <div class="actions">
       <!-- svelte-ignore a11y_autofocus -->
-      <button class="btn" autofocus onclick={() => (open = false)}>Cancel</button>
+      <button class="btn" autofocus onclick={() => (open = false)}>{t.common.cancel}</button>
       <button class="btn destructive" onclick={confirm}>{confirmLabel}</button>
     </div>
   </div>
