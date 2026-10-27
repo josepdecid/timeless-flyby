@@ -92,9 +92,9 @@ Use one scope only; never combine them as `(map,charts)`.
 | `splits`   | `SplitsTable.svelte`: split table UI                                                      |
 | `segments` | `SegmentsTable.svelte`: custom segments tab (create, edit, delete, per-segment times)     |
 | `tracks`   | `TrackList.svelte`: activity list, rename, include/exclude, reference, pass select        |
-| `settings` | `SettingsPanel.svelte`: time mode, speed mode, section reset, clear all                   |
+| `settings` | `SettingsPanel.svelte`, `SettingsDialog.svelte`: time mode, speed mode, section reset, units and theme modal |
 | `theme`    | `app.css`, `colors.ts`, `Icon.svelte`: design tokens, light/dark mode, palettes, icons    |
-| `ui`       | `App.svelte`, `Welcome.svelte`, `Notices.svelte`, `index.html`, `main.ts`, `scripts/make-og.mjs`, `scripts/og/*`: layout, header, tabs, drag-and-drop, welcome screen, notices, SEO/social meta and preview card |
+| `ui`       | `App.svelte`, `Brand.svelte`, `Welcome.svelte`, `Notices.svelte`, `index.html`, `main.ts`, `scripts/make-og.mjs`, `scripts/og/*`: layout, header, tabs, drag-and-drop, welcome screen, notices, SEO/social meta and preview card |
 
 ### Tooling
 

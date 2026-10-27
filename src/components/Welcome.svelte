@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/state.svelte';
+  import Brand from './Brand.svelte';
   import Icon from './Icon.svelte';
   import StravaLink from './StravaLink.svelte';
 
@@ -8,6 +9,9 @@
 
 <section class="welcome">
   <div class="inner">
+    <div class="brand-wrap">
+      <Brand />
+    </div>
     <h2>Race your past self, or anyone else, on the same route.</h2>
     <p class="secondary lead">
       Drop two or more GPX, TCX or FIT files. Each one is aligned to the same start line and replayed as if everyone set off
@@ -44,6 +48,9 @@
   .inner {
     max-width: 640px;
     width: 100%;
+  }
+  .brand-wrap {
+    margin-bottom: 28px;
   }
   h2 {
     font-size: 26px;

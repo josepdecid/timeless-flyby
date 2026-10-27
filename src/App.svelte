@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Brand from './components/Brand.svelte';
   import ChartsPanel from './components/ChartsPanel.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import Icon from './components/Icon.svelte';
@@ -10,7 +11,7 @@
   import Welcome from './components/Welcome.svelte';
   import { MAX_TRACKS } from './lib/colors';
   import { ACCEPTED_EXTENSIONS } from './lib/parse';
-  import { app, DEFAULT_CHART_HEIGHT, type Theme } from './lib/state.svelte';
+  import { app, DEFAULT_CHART_HEIGHT } from './lib/state.svelte';
 
   let fileInput: HTMLInputElement;
   let dragDepth = $state(0);
@@ -66,12 +67,6 @@
     else return;
     e.preventDefault();
   }
-
-  const THEMES: Theme[] = ['system', 'light', 'dark'];
-  const themeIcon = $derived(app.settings.theme === 'system' ? 'auto' : app.settings.theme === 'light' ? 'sun' : 'moon');
-  function cycleTheme() {
-    app.settings.theme = THEMES[(THEMES.indexOf(app.settings.theme) + 1) % THEMES.length];
-  }
 </script>
 
 <svelte:window
@@ -105,36 +100,15 @@
 />
 
 <div class="app" class:fit={app.activities.length > 0}>
-  <header class="top">
-    <div class="brand">
-      <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
-        <path d="M4 21c4-9 8-12 11-8s7 1 13-8" fill="none" stroke="var(--accent)" stroke-width="3.2" stroke-linecap="round" />
-        <path d="M4 27c4-9 8-12 11-8s7 1 13-8" fill="none" stroke="#eb6834" stroke-width="3.2" stroke-linecap="round" />
-      </svg>
-      <h1 class="name">Timeless Flyby</h1>
-    </div>
-    <div class="tools">
-      {#if app.activities.length}
-        <button class="btn" onclick={browse} disabled={app.loading || app.activities.length >= MAX_TRACKS}>
-          <Icon name="upload" /> <span class="hide-sm">Add files</span>
-        </button>
-      {/if}
-      <div class="seg" role="group" aria-label="Units">
-        <button aria-pressed={app.settings.units === 'metric'} onclick={() => (app.settings.units = 'metric')}>km</button>
-        <button aria-pressed={app.settings.units === 'imperial'} onclick={() => (app.settings.units = 'imperial')}>mi</button>
-      </div>
-      <button class="btn ghost icon" onclick={cycleTheme} aria-label="Theme: {app.settings.theme}" title="Theme: {app.settings.theme}">
-        <Icon name={themeIcon} />
-      </button>
-    </div>
-  </header>
-
   {#if app.activities.length === 0}
     <main class="empty">
       <Welcome onbrowse={browse} />
     </main>
   {:else}
     <main class="layout">
+      <div class="brandcell">
+        <Brand />
+      </div>
       <aside class="side">
         <section>
           <div class="sechead">
@@ -217,34 +191,6 @@
     height: 100vh;
     height: 100dvh;
   }
-  .top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .brand .name {
-    margin: 0;
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: -0.01em;
-  }
-  .tools {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
   .empty {
     flex: 1;
   }
@@ -252,11 +198,19 @@
     flex: 1;
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 16px;
     padding: 16px;
     min-height: 0;
   }
+  /* The brand row tops the sidebar column but stays put while the activity list scrolls. */
+  .brandcell {
+    grid-column: 1;
+    grid-row: 1;
+  }
   .side {
+    grid-column: 1;
+    grid-row: 2;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -306,6 +260,8 @@
     color: var(--text);
   }
   .content {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -379,7 +335,14 @@
     }
     .layout {
       grid-template-columns: 1fr;
+      grid-template-rows: none;
       padding: 12px 16px;
+    }
+    .brandcell,
+    .side,
+    .content {
+      grid-column: auto;
+      grid-row: auto;
     }
     .side {
       position: static;
@@ -403,11 +366,6 @@
     .content :global(.panel:not(.full)) {
       height: 300px;
       max-height: none;
-    }
-  }
-  @media (max-width: 520px) {
-    .hide-sm {
-      display: none;
     }
   }
 </style>
