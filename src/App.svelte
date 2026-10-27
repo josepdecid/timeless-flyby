@@ -1,5 +1,6 @@
 <script lang="ts">
   import ChartsPanel from './components/ChartsPanel.svelte';
+  import ConfirmDialog from './components/ConfirmDialog.svelte';
   import Icon from './components/Icon.svelte';
   import MapView from './components/MapView.svelte';
   import Notices from './components/Notices.svelte';
@@ -13,6 +14,7 @@
 
   let fileInput: HTMLInputElement;
   let dragDepth = $state(0);
+  let confirmClear = $state(false);
 
   function browse() {
     fileInput.click();
@@ -135,7 +137,10 @@
     <main class="layout">
       <aside class="side">
         <section>
-          <h2>Activities <span class="muted">{app.activities.length}/{MAX_TRACKS}</span></h2>
+          <div class="sechead">
+            <h2>Activities <span class="muted">{app.activities.length}/{MAX_TRACKS}</span></h2>
+            <button class="btn ghost danger" onclick={() => (confirmClear = true)}>Remove all</button>
+          </div>
           <TrackList />
           {#if app.activities.length < MAX_TRACKS}
             <button class="add" onclick={browse} disabled={app.loading}>
@@ -191,6 +196,13 @@
     </div>
   </div>
 {/if}
+
+<ConfirmDialog bind:open={confirmClear} title="Remove all activities?" confirmLabel="Remove all" onconfirm={() => app.clearAll()}>
+  <p>
+    {app.activities.length === 1 ? 'The activity' : `All ${app.activities.length} activities`} will be deleted from this
+    browser and can't be recovered. Your custom segments are kept.
+  </p>
+</ConfirmDialog>
 
 <Notices />
 
@@ -259,6 +271,25 @@
     color: var(--text-2);
     margin: 0 0 8px;
     font-weight: 600;
+  }
+  .sechead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .sechead h2 {
+    margin: 0;
+  }
+  .danger {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: var(--critical);
+  }
+  .danger:hover {
+    background: color-mix(in srgb, var(--critical) 10%, transparent);
   }
   .add {
     width: 100%;
