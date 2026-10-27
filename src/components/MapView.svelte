@@ -5,6 +5,7 @@
   import { matchOnRoute, positionAt, snapToRoute } from '../lib/align';
   import { positionAtX, routeBetween, segmentStats, type Comparison } from '../lib/analysis';
   import { divergingColor, divergingLegend } from '../lib/colors';
+  import { t } from '../lib/i18n.svelte';
   import {
     app,
     clampCount,
@@ -35,9 +36,8 @@
   let markerRenderer: L.Renderer;
   let lastFitKey = '';
 
-  // Keyless tile sources only. "Default" is OSM, toned down (and inverted in dark mode) by CSS
-  // so the data colours stand out.
-  const TILES: Record<Exclude<BaseMap, 'auto'>, { url: string; attribution: string; maxZoom: number }> = {
+  // Keyless tile sources only.
+  const TILES: Record<BaseMap, { url: string; attribution: string; maxZoom: number }> = {
     osm: {
       url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -63,7 +63,7 @@
 
   onMount(() => {
     // Attribution goes top-right so the bottom cards can sit as close to the edge as the sides.
-    const m = L.map(el, { preferCanvas: true, zoomControl: true, attributionControl: false }).setView([41.39, 2.17], 12);
+    const m = L.map(el, { preferCanvas: true, zoomControl: false, attributionControl: false }).setView([41.39, 2.17], 12);
     L.control.attribution({ position: 'topright' }).addTo(m);
     // Runner and hover markers get their own pane above the route lines, which are redrawn often.
     m.createPane('tf-markers').style.zIndex = '450';
@@ -94,10 +94,17 @@
     }
   }
 
+  // Zoom buttons; rebuilt when the language changes since Leaflet only reads their titles once.
+  $effect(() => {
+    if (!map) return;
+    const zoom = L.control.zoom({ zoomInTitle: t.map.zoomIn, zoomOutTitle: t.map.zoomOut }).addTo(map);
+    return () => zoom.remove();
+  });
+
   // Base layer
   $effect(() => {
     if (!map) return;
-    const t = TILES[app.settings.baseMap === 'auto' ? 'osm' : app.settings.baseMap];
+    const t = TILES[app.settings.baseMap];
     base?.remove();
     base = L.tileLayer(t.url, { attribution: t.attribution, maxZoom: t.maxZoom, detectRetina: false }).addTo(map);
     base.bringToBack();
@@ -161,10 +168,10 @@
       const tip =
         mode === 'gain'
           ? Number.isFinite(rel)
-            ? `${Math.abs(rel * 100).toFixed(1)}% ${rel > 0 ? 'slower' : 'faster'} than the reference`
-            : 'Not covered'
+            ? (rel > 0 ? t.map.pctSlower : t.map.pctFaster)(Math.abs(rel * 100).toFixed(1))
+            : t.map.notCovered
           : s.fastest >= 0
-            ? `Fastest: ${view.names.get(cmp.tracks[s.fastest].activity.id)}`
+            ? t.map.fastestTip(view.names.get(cmp.tracks[s.fastest].activity.id) ?? '')
             : '';
       const name = segments[i].name;
       L.polyline(routeBetween(cmp, s.from, s.to).map(ll), { color, weight: 6, opacity: 1, lineCap: 'butt' })
@@ -176,7 +183,7 @@
   function flagIcon(kind: 'start' | 'finish') {
     return L.divIcon({
       className: `tf-flag tf-flag-${kind}`,
-      html: `<i></i><span>${kind === 'start' ? 'Start' : 'Finish'}</span>`,
+      html: `<i></i><span>${kind === 'start' ? t.map.start : t.map.finish}</span>`,
       iconSize: [0, 0],
       iconAnchor: [0, 0],
     });
@@ -190,7 +197,7 @@
         icon: flagIcon(kind),
         draggable: true,
         keyboard: true,
-        title: `Drag to move the ${kind} along the reference route`,
+        title: kind === 'start' ? t.map.dragStart : t.map.dragFinish,
         zIndexOffset: 1000,
       });
       m.on('drag', () => {
@@ -250,7 +257,7 @@
           icon: L.divIcon({ className: 'tf-seg-end', html: '<i></i>', iconSize: [0, 0], iconAnchor: [0, 0] }),
           draggable: true,
           keyboard: true,
-          title: `Drag to move the segment ${which === 'from' ? 'start' : 'end'} along the reference route`,
+          title: which === 'from' ? t.map.dragSegStart : t.map.dragSegEnd,
           zIndexOffset: 900,
         });
         m.on('drag', () => {
@@ -362,27 +369,27 @@
 
 {#snippet mapControls(where: 'top' | 'docked', tracks: number)}
 <div class="controls card {where}">
-  <div class="seg" role="group" aria-label="Map colouring">
+  <div class="seg" role="group" aria-label={t.map.colouringAria}>
     <button aria-pressed={app.settings.mapColorMode === 'tracks'} onclick={() => (app.settings.mapColorMode = 'tracks')}>
-      Tracks
+      {t.map.tracks}
     </button>
     <button
       aria-pressed={app.settings.mapColorMode === 'gain'}
       disabled={tracks < 2}
-      onclick={() => (app.settings.mapColorMode = 'gain')}>Gain / loss</button
+      onclick={() => (app.settings.mapColorMode = 'gain')}>{t.map.difference}</button
     >
     <button
       aria-pressed={app.settings.mapColorMode === 'fastest'}
       disabled={tracks < 2}
-      onclick={() => (app.settings.mapColorMode = 'fastest')}>Fastest</button
+      onclick={() => (app.settings.mapColorMode = 'fastest')}>{t.map.fastest}</button
     >
   </div>
   {#if app.settings.mapColorMode !== 'tracks' && tracks > 1}
     <div class="segctl">
-      <select class="input" bind:value={app.settings.segmentMode} aria-label="How the route is split for colouring">
-        <option value="even">Even splits</option>
-        <option value="distance">By distance</option>
-        <option value="custom">Custom segments</option>
+      <select class="input" bind:value={app.settings.segmentMode} aria-label={t.map.splitAria}>
+        <option value="even">{t.map.even}</option>
+        <option value="distance">{t.map.byDistance}</option>
+        <option value="custom">{t.map.custom}</option>
       </select>
       {#if app.settings.segmentMode === 'even'}
         <input
@@ -395,50 +402,44 @@
             app.settings.segmentCount = clampCount(e.currentTarget.valueAsNumber);
             e.currentTarget.value = String(app.settings.segmentCount);
           }}
-          aria-label="Number of even splits (up to {MAX_EVEN_SEGMENTS})"
-          title="Number of even splits (up to {MAX_EVEN_SEGMENTS})"
+          aria-label={t.map.evenCount(MAX_EVEN_SEGMENTS)}
+          title={t.map.evenCount(MAX_EVEN_SEGMENTS)}
         />
       {:else if app.settings.segmentMode === 'distance'}
         <select
           class="input"
           value={app.segmentLength}
           onchange={(e) => (app.settings.segmentLength = +e.currentTarget.value)}
-          aria-label="Split length"
+          aria-label={t.map.splitLength}
         >
           {#each SEGMENT_LENGTHS[app.settings.units] as [v, label] (v)}
-            <option value={v}>Every {label}</option>
+            <option value={v}>{t.map.every(label)}</option>
           {/each}
         </select>
       {:else}
         <button class="btn" onclick={() => (app.settings.stat = 'segments')}>
-          {app.mapSegments.length ? `${app.mapSegments.length} on route` : 'None yet'} · Edit
+          {app.mapSegments.length ? t.map.onRoute(app.mapSegments.length) : t.map.noneYet} · {t.map.edit}
         </button>
       {/if}
     </div>
   {/if}
-  <select class="input" bind:value={app.settings.baseMap} aria-label="Base map">
-    <option value="auto">Map: default</option>
-    <option value="osm">Map: OpenStreetMap</option>
-    <option value="topo">Map: topographic</option>
-    <option value="satellite">Map: satellite</option>
+  <select class="input" bind:value={app.settings.baseMap} aria-label={t.map.baseAria}>
+    <option value="osm">{t.map.baseOsm}</option>
+    <option value="topo">{t.map.baseTopo}</option>
+    <option value="satellite">{t.map.baseSatellite}</option>
   </select>
 </div>
 {/snippet}
 
 <div class="mapwrap" class:full bind:this={wrap}>
-  <div
-    class="map"
-    class:muted-tiles={app.settings.baseMap === 'auto' && !app.dark}
-    class:dark-tiles={app.settings.baseMap === 'auto' && app.dark}
-    bind:this={el}
-  ></div>
+  <div class="map" bind:this={el}></div>
 
   <button
     class="fs"
     onclick={toggleFull}
     aria-pressed={full}
-    aria-label={full ? 'Exit fullscreen' : 'Fullscreen map'}
-    title={full ? 'Exit fullscreen (Esc)' : 'Fullscreen map'}
+    aria-label={full ? t.common.exitFullscreen : t.map.fullscreen}
+    title={full ? t.common.exitFullscreenEsc : t.map.fullscreen}
   >
     <Icon name={full ? 'collapse' : 'expand'} size={18} />
   </button>
@@ -456,13 +457,13 @@
               class="input compact"
               value={app.comparison.tracks[app.focusIndex]?.activity.id}
               onchange={(e) => (app.session.focusId = e.currentTarget.value)}
-              aria-label="Track compared with the reference"
+              aria-label={t.map.focusAria}
             >
               {#each app.comparison.tracks.slice(1) as tr (tr.activity.id)}
                 <option value={tr.activity.id}>{view.names.get(tr.activity.id)}</option>
               {/each}
             </select>
-            <span class="secondary">vs reference</span>
+            <span class="secondary">{t.map.vsReference}</span>
           </div>
           <div class="bins">
             {#each legend as b (b.label)}
@@ -472,8 +473,8 @@
               </div>
             {/each}
           </div>
-          <div class="ends"><span>faster</span><span>slower</span></div>
-          <span class="sr-only">Showing {focusName}</span>
+          <div class="ends"><span>{t.map.faster}</span><span>{t.map.slower}</span></div>
+          <span class="sr-only">{t.map.showing(focusName ?? '')}</span>
         </div>
       {/if}
       {@render mapControls('docked', app.comparison.tracks.length)}
@@ -534,7 +535,7 @@
     padding: 4px;
     box-shadow: var(--shadow);
   }
-  /* Bottom cards (gain/loss scale, replay bar) stack here instead of overlapping. */
+  /* Bottom cards (difference scale, replay bar) stack here instead of overlapping. */
   .dock {
     position: absolute;
     left: 12px;
@@ -614,12 +615,6 @@
     justify-content: space-between;
     color: var(--text-2);
     margin-top: 2px;
-  }
-  .muted-tiles :global(.leaflet-tile-pane) {
-    filter: grayscale(0.85) contrast(0.9) brightness(1.04);
-  }
-  .dark-tiles :global(.leaflet-tile-pane) {
-    filter: invert(1) hue-rotate(180deg) grayscale(0.8) brightness(0.85) contrast(0.9);
   }
   :global(.tf-seg-end i) {
     position: absolute;

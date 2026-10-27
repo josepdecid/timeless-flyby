@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { LOCALES, t, type Locale } from '../lib/i18n.svelte';
   import { app, type Theme } from '../lib/state.svelte';
   import Icon, { type IconName } from './Icon.svelte';
 
@@ -13,11 +14,11 @@
     else if (!open && dialog.open) dialog.close();
   });
 
-  const THEMES: { value: Theme; label: string; icon: IconName }[] = [
-    { value: 'system', label: 'System', icon: 'auto' },
-    { value: 'light', label: 'Light', icon: 'sun' },
-    { value: 'dark', label: 'Dark', icon: 'moon' },
-  ];
+  const THEMES: { value: Theme; label: string; icon: IconName }[] = $derived([
+    { value: 'system', label: t.settings.system, icon: 'auto' },
+    { value: 'light', label: t.settings.light, icon: 'sun' },
+    { value: 'dark', label: t.settings.dark, icon: 'moon' },
+  ]);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
@@ -32,23 +33,23 @@
 >
   <div class="body">
     <div class="head">
-      <h2 id="settings-title">Settings</h2>
-      <button class="btn ghost icon" onclick={() => (open = false)} aria-label="Close" title="Close">
+      <h2 id="settings-title">{t.common.settings}</h2>
+      <button class="btn ghost icon" onclick={() => (open = false)} aria-label={t.common.close} title={t.common.close}>
         <Icon name="close" />
       </button>
     </div>
 
     <div class="field">
-      <div class="label">Units</div>
-      <div class="seg" role="group" aria-label="Units">
+      <div class="label">{t.settings.units}</div>
+      <div class="seg" role="group" aria-label={t.settings.units}>
         <button aria-pressed={app.settings.units === 'metric'} onclick={() => (app.settings.units = 'metric')}>km</button>
         <button aria-pressed={app.settings.units === 'imperial'} onclick={() => (app.settings.units = 'imperial')}>mi</button>
       </div>
     </div>
 
     <div class="field">
-      <div class="label">Theme</div>
-      <div class="seg" role="group" aria-label="Theme">
+      <div class="label">{t.settings.theme}</div>
+      <div class="seg" role="group" aria-label={t.settings.theme}>
         {#each THEMES as t (t.value)}
           <button aria-pressed={app.settings.theme === t.value} onclick={() => (app.settings.theme = t.value)}>
             <Icon name={t.icon} size={14} />
@@ -56,6 +57,15 @@
           </button>
         {/each}
       </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="settings-language">{t.settings.language}</label>
+      <select id="settings-language" class="input" bind:value={app.settings.language}>
+        {#each Object.entries(LOCALES) as [code, name] (code)}
+          <option value={code as Locale} lang={code}>{name}</option>
+        {/each}
+      </select>
     </div>
   </div>
 </dialog>

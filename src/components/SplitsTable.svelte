@@ -1,6 +1,7 @@
 <script lang="ts">
   import { computeSplits } from '../lib/analysis';
   import { fmtDistance, fmtDuration, fmtGap } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
 
@@ -17,7 +18,7 @@
   const options = $derived(
     units === 'imperial'
       ? [
-          [0, 'Auto'],
+          [0, t.common.auto],
           [402.336, '¼ mi'],
           [804.672, '½ mi'],
           [1609.344, '1 mi'],
@@ -25,7 +26,7 @@
           [16093.44, '10 mi'],
         ]
       : [
-          [0, 'Auto'],
+          [0, t.common.auto],
           [200, '200 m'],
           [400, '400 m'],
           [500, '500 m'],
@@ -40,7 +41,7 @@
   <div class="wrap">
     <div class="toolbar">
       <label>
-        <span class="secondary">Split length</span>
+        <span class="secondary">{t.splits.length}</span>
         <select class="input" bind:value={app.settings.splitLength}>
           {#each options as [v, label] (v)}
             <option value={v}>{label}</option>
@@ -48,15 +49,14 @@
         </select>
       </label>
       <span class="muted">
-        Split times along the reference route · Δ is relative to the reference · <strong class="secondary">bold</strong> = fastest
-        split
+        {t.splits.hint} <strong class="secondary">{t.common.bold}</strong> {t.splits.fastest}
       </span>
     </div>
     <div class="scroll">
       <table>
         <thead>
           <tr>
-            <th class="left">Split</th>
+            <th class="left">{t.splits.split}</th>
             {#each cmp.tracks as tr (tr.activity.id)}
               <th colspan="2" class="left trackhead">
                 <span class="swatch line" style:background={view.colors.get(tr.activity.id)}></span>
@@ -65,10 +65,10 @@
             {/each}
           </tr>
           <tr class="sub">
-            <th class="left muted">to</th>
+            <th class="left muted">{t.splits.to}</th>
             {#each cmp.tracks as tr, k (tr.activity.id)}
-              <th class="muted">time · {view.speed.unit}</th>
-              <th class="muted">{k === 0 ? 'cumulative' : 'Δ split · total'}</th>
+              <th class="muted">{t.common.timeUnit(view.speed.unit)}</th>
+              <th class="muted">{k === 0 ? t.splits.cumulative : t.splits.deltaTotal}</th>
             {/each}
           </tr>
         </thead>
@@ -101,10 +101,10 @@
         </tbody>
         <tfoot>
           <tr>
-            <td class="left">Total</td>
+            <td class="left">{t.splits.total}</td>
             {#each cmp.tracks as tr, k (tr.activity.id)}
               <td class="num">
-                {tr.aligned.finished ? fmtDuration(tr.duration) : 'DNF'}
+                {tr.aligned.finished ? fmtDuration(tr.duration) : t.tracks.dnf}
                 <span class="muted"> · {tr.aligned.finished ? speedText(tr.duration, cmp.length) : '–'}</span>
               </td>
               <td class="num">

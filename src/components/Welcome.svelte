@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { MAX_TRACKS } from '../lib/colors';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import Brand from './Brand.svelte';
   import Icon from './Icon.svelte';
@@ -12,28 +14,24 @@
     <div class="brand-wrap">
       <Brand />
     </div>
-    <h2>Race your past self, or anyone else, on the same route.</h2>
-    <p class="secondary lead">
-      Drop two or more GPX, TCX or FIT files. Each one is aligned to the same start line and replayed as if everyone set off
-      together, so you can see where you gained or lost time, even months apart.
-    </p>
+    <h2>{t.welcome.tagline}</h2>
+    <p class="secondary lead">{t.welcome.lead}</p>
     <button class="drop" onclick={onbrowse}>
       <Icon name="upload" size={28} />
-      <strong>Drop activity files here</strong>
-      <span class="muted">or click to browse · .gpx .tcx .fit · up to 8</span>
+      <strong>{t.welcome.drop}</strong>
+      <span class="muted">{t.welcome.browse(MAX_TRACKS)}</span>
     </button>
     <div class="strava-wrap">
       <StravaLink />
     </div>
     <div class="alt">
-      <button class="btn" onclick={() => app.loadSamples()} disabled={app.loading}>Try sample activities</button>
-      <span class="muted">Your files are processed in this browser. Nothing is uploaded.</span>
+      <button class="btn" onclick={() => app.loadSamples()} disabled={app.loading}>{t.welcome.samples}</button>
+      <span class="muted">{t.welcome.privacy}</span>
     </div>
     <ul class="features">
-      <li><strong>Replay</strong><span class="muted">Everyone starts together on the map, at any speed.</span></li>
-      <li><strong>Gap chart</strong><span class="muted">Time ahead or behind at every point along the route.</span></li>
-      <li><strong>Gain / loss map</strong><span class="muted">See which stretches were faster or slower.</span></li>
-      <li><strong>Splits & metrics</strong><span class="muted">Splits, plus pace, elevation, HR, cadence and power overlays.</span></li>
+      {#each t.welcome.features as [title, text] (title)}
+        <li><strong>{title}</strong><span class="muted">{text}</span></li>
+      {/each}
     </ul>
   </div>
 </section>

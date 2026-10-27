@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fmtDistance } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
 </script>
 
@@ -7,49 +8,47 @@
   {#if app.comparison}
     <div class="field">
       <div class="label">
-        <span>Compared section</span>
+        <span>{t.comparison.section}</span>
         {#if app.session.section}
-          <button class="link" onclick={() => app.setSection(null)}>Reset to auto</button>
+          <button class="link" onclick={() => app.setSection(null)}>{t.comparison.resetAuto}</button>
         {/if}
       </div>
       <div class="value num">
         {fmtDistance(app.comparison.length, app.settings.units)}
-        <span class="muted">· {app.session.section ? 'manual' : 'auto-detected common route'}</span>
+        <span class="muted">· {app.session.section ? t.comparison.manual : t.comparison.autoDetected}</span>
       </div>
-      <p class="hint muted">Drag the Start and Finish flags on the map to trim it.</p>
+      <p class="hint muted">{t.comparison.flagsHint}</p>
     </div>
   {/if}
 
   <div class="field">
-    <div class="label">Time</div>
-    <div class="seg" role="group" aria-label="Time mode">
+    <div class="label">{t.comparison.time}</div>
+    <div class="seg" role="group" aria-label={t.comparison.timeAria}>
       <button aria-pressed={app.settings.timeMode === 'elapsed'} onclick={() => (app.settings.timeMode = 'elapsed')}>
-        Elapsed
+        {t.comparison.elapsed}
       </button>
       <button aria-pressed={app.settings.timeMode === 'moving'} onclick={() => (app.settings.timeMode = 'moving')}>
-        Moving
+        {t.comparison.moving}
       </button>
     </div>
     <p class="hint muted">
-      {app.settings.timeMode === 'elapsed'
-        ? 'Stops count against you, as in a race.'
-        : 'Stopped time (traffic lights, breaks) is removed.'}
+      {app.settings.timeMode === 'elapsed' ? t.comparison.elapsedHint : t.comparison.movingHint}
     </p>
   </div>
 
   <div class="field">
-    <div class="label">Speed as</div>
-    <div class="seg" role="group" aria-label="Speed display">
-      <button aria-pressed={app.settings.speedMode === 'auto'} onclick={() => (app.settings.speedMode = 'auto')}>Auto</button>
-      <button aria-pressed={app.settings.speedMode === 'pace'} onclick={() => (app.settings.speedMode = 'pace')}>Pace</button>
-      <button aria-pressed={app.settings.speedMode === 'speed'} onclick={() => (app.settings.speedMode = 'speed')}>Speed</button>
+    <div class="label">{t.comparison.speedAs}</div>
+    <div class="seg" role="group" aria-label={t.comparison.speedAria}>
+      <button aria-pressed={app.settings.speedMode === 'auto'} onclick={() => (app.settings.speedMode = 'auto')}>{t.common.auto}</button>
+      <button aria-pressed={app.settings.speedMode === 'pace'} onclick={() => (app.settings.speedMode = 'pace')}>{t.comparison.pace}</button>
+      <button aria-pressed={app.settings.speedMode === 'speed'} onclick={() => (app.settings.speedMode = 'speed')}>{t.comparison.speed}</button>
     </div>
   </div>
 
   {#if app.persistFailed}
-    <p class="hint warn">These activities are too large to keep after a reload; they'll stay until you close the tab.</p>
+    <p class="hint warn">{t.comparison.tooLarge}</p>
   {:else if app.activities.length}
-    <p class="hint muted">Saved in this browser only. Nothing is uploaded.</p>
+    <p class="hint muted">{t.comparison.saved}</p>
   {/if}
 </div>
 

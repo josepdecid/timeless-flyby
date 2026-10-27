@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
   import { fmtDuration } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import Icon from './Icon.svelte';
 
@@ -64,7 +65,7 @@
 
 {#if app.comparison}
   <div class="bar card">
-    <button class="btn primary icon" onclick={toggle} aria-label={app.playing ? 'Pause replay' : 'Play replay'} title="Space">
+    <button class="btn primary icon" onclick={toggle} aria-label={app.playing ? t.replay.pause : t.replay.play} title={t.replay.spaceKey}>
       <Icon name={app.playing ? 'pause' : 'play'} size={14} />
     </button>
     <button
@@ -73,7 +74,7 @@
         app.playing = false;
         app.clock = 0;
       }}
-      aria-label="Back to start"
+      aria-label={t.replay.restart}
       disabled={app.clock === 0}
     >
       <Icon name="restart" size={14} />
@@ -87,12 +88,12 @@
       step="1"
       bind:value={app.clock}
       oninput={() => (app.playing = false)}
-      aria-label="Replay position"
+      aria-label={t.replay.position}
     />
     <label class="opt">
-      <span class="sr-only">Replay speed</span>
+      <span class="sr-only">{t.replay.speed}</span>
       <select class="input" bind:value={app.settings.replaySpeed}>
-        <option value={0}>Auto ({autoSpeed}×)</option>
+        <option value={0}>{t.replay.auto(autoSpeed)}</option>
         {#each SPEEDS as s (s)}
           <option value={s}>{s}×</option>
         {/each}
@@ -100,7 +101,7 @@
     </label>
     <label class="opt check">
       <input type="checkbox" bind:checked={app.settings.follow} />
-      <span>Follow</span>
+      <span>{t.replay.follow}</span>
     </label>
   </div>
 {/if}

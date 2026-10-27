@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fmtDateTime, fmtDistance, fmtDuration, fmtGap, sportLabel } from '../lib/format';
+  import { t } from '../lib/i18n.svelte';
   import { app } from '../lib/state.svelte';
   import { view } from '../lib/view.svelte';
   import Icon from './Icon.svelte';
@@ -47,25 +48,25 @@
               }}
             />
           {:else}
-            <button class="name" title="Rename" onclick={() => (editing = a.id)}>
+            <button class="name" title={t.tracks.rename} onclick={() => (editing = a.id)}>
               {a.name}
             </button>
           {/if}
           <div class="meta muted">{sportLabel(a.sport)} · {fmtDateTime(a.points[0].t)}</div>
         </div>
         <div class="actions">
-          <button class="btn ghost icon" onclick={() => (editing = a.id)} aria-label="Rename {a.name}" title="Rename">
+          <button class="btn ghost icon" onclick={() => (editing = a.id)} aria-label={t.tracks.renameNamed(a.name)} title={t.tracks.rename}>
             <Icon name="edit" />
           </button>
           <button
             class="btn ghost icon"
             onclick={() => (a.included = !a.included)}
-            aria-label={a.included ? 'Exclude from comparison' : 'Include in comparison'}
-            title={a.included ? 'Exclude from comparison' : 'Include in comparison'}
+            aria-label={a.included ? t.tracks.exclude : t.tracks.include}
+            title={a.included ? t.tracks.exclude : t.tracks.include}
           >
             <Icon name={a.included ? 'eye' : 'eyeOff'} />
           </button>
-          <button class="btn ghost icon" onclick={() => app.remove(a.id)} aria-label="Remove {a.name}" title="Remove">
+          <button class="btn ghost icon" onclick={() => app.remove(a.id)} aria-label={t.tracks.removeNamed(a.name)} title={t.tracks.remove}>
             <Icon name="close" />
           </button>
         </div>
@@ -78,14 +79,14 @@
             class:active={isRef}
             onclick={() => app.setReference(a.id)}
             aria-pressed={isRef}
-            title={isRef ? 'This is the reference' : 'Use as reference'}
+            title={isRef ? t.tracks.isReference : t.tracks.useAsReference}
           >
             <Icon name="star" size={13} />
-            {isRef ? 'Reference' : 'Set as ref'}
+            {isRef ? t.tracks.reference : t.tracks.setAsRef}
           </button>
           {#if tr}
-            <span class="stat num" title="Time over the compared section">
-              {tr.aligned.finished ? fmtDuration(tr.duration) : `DNF · ${fmtDistance(tr.aligned.reachedD - (app.comparison?.section.startD ?? 0), app.settings.units)}`}
+            <span class="stat num" title={t.tracks.sectionTime}>
+              {tr.aligned.finished ? fmtDuration(tr.duration) : `${t.tracks.dnf} · ${fmtDistance(tr.aligned.reachedD - (app.comparison?.section.startD ?? 0), app.settings.units)}`}
             </span>
             <span class="stat num muted">{avgSpeed(a.id)}</span>
             {#if !isRef && refTrack && tr.aligned.finished && refTrack.aligned.finished}
@@ -96,20 +97,20 @@
         </div>
         {#if tr && tr.aligned.passCount > 1}
           <label class="pass">
-            <span class="muted">Passes the start {tr.aligned.passCount}×, using</span>
+            <span class="muted">{t.tracks.passes(tr.aligned.passCount)}</span>
             <select
               class="input compact"
               value={tr.aligned.passUsed}
               onchange={(e) => (app.session.passes[a.id] = Number(e.currentTarget.value))}
             >
               {#each { length: tr.aligned.passCount } as _, i (i)}
-                <option value={i}>pass {i + 1}</option>
+                <option value={i}>{t.tracks.pass(i + 1)}</option>
               {/each}
             </select>
           </label>
         {/if}
         {#if tr && !isRef && tr.aligned.offRoute > 0.2}
-          <p class="warn"><Icon name="warn" size={13} /> {Math.round(tr.aligned.offRoute * 100)}% of this track is off the reference route.</p>
+          <p class="warn"><Icon name="warn" size={13} /> {t.tracks.offRoute(Math.round(tr.aligned.offRoute * 100))}</p>
         {/if}
       {/if}
     </li>
