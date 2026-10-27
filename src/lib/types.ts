@@ -31,3 +31,13 @@ export interface LatLon {
   lat: number;
   lon: number;
 }
+
+/** A stretch of road the user marked, saved by its ends so it outlives the activities. */
+export interface CustomSegment {
+  id: string;
+  name: string;
+  start: LatLon;
+  end: LatLon;
+  /** Distances along the reference route when last placed; picks the pass on loops and out-and-backs. */
+  near: [number, number];
+}

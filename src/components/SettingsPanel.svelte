@@ -51,9 +51,6 @@
   {:else if app.activities.length}
     <p class="hint muted">Saved in this browser only. Nothing is uploaded.</p>
   {/if}
-  {#if app.activities.length}
-    <button class="btn ghost danger" onclick={() => app.clearAll()}>Remove all activities</button>
-  {/if}
 </div>
 
 <style>
@@ -98,14 +95,5 @@
   }
   .seg {
     align-self: flex-start;
-  }
-  .danger {
-    align-self: flex-start;
-    color: var(--text-2);
-    padding: 0 6px;
-    font-size: 13px;
-  }
-  .danger:hover {
-    color: var(--critical);
   }
 </style>

@@ -109,6 +109,37 @@ export function snapToRoute(route: RefRoute, p: LatLon): number {
   return bestD;
 }
 
+/**
+ * Distance along the route of the point closest to `p`, among the passes within `tol` metres of
+ * it. Loops and out-and-backs pass a spot more than once; `near` (a distance along the route)
+ * picks the pass. Null when the route never comes within `tol`.
+ */
+export function matchOnRoute(route: RefRoute, p: LatLon, near: number, tol = 30): number | null {
+  const [px, py] = route.proj.project([p]);
+  const tol2 = tol * tol;
+  let best: number | null = null;
+  // Each run of consecutive route segments within reach is one pass; keep its closest point.
+  let runD2 = Infinity;
+  let runD = 0;
+  const closeRun = () => {
+    if (runD2 < Infinity && (best == null || Math.abs(runD - near) < Math.abs(best - near))) best = runD;
+    runD2 = Infinity;
+  };
+  for (let j = 0; j < route.points.length - 1; j++) {
+    const r = segDist2(px, py, route.xy, j);
+    if (r.d2 > tol2) {
+      closeRun();
+      continue;
+    }
+    if (r.d2 < runD2) {
+      runD2 = r.d2;
+      runD = lerp(route.cum[j], route.cum[j + 1], r.f);
+    }
+  }
+  closeRun();
+  return best;
+}
+
 function segDist2(px: number, py: number, xy: Float64Array, j: number): { d2: number; f: number } {
   const ax = xy[2 * j];
   const ay = xy[2 * j + 1];
