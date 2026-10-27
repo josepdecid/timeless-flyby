@@ -145,6 +145,20 @@ input.input {
   background: var(--surface);
   padding: 0 8px;
 }
+/* Own chevron: the native arrow hugs the edge and ignores padding. Drawn from two gradients so it
+   follows the theme colours. */
+select.input {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-2) 50%),
+    linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+  background-position:
+    right 15px center,
+    right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
 
 /* Segmented control */
 .seg {
