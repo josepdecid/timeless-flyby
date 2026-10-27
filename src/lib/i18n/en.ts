@@ -71,6 +71,7 @@ export const en = {
     light: 'Light',
     dark: 'Dark',
     language: 'Language',
+    source: 'View source code on GitHub',
   },
   comparison: {
     section: 'Compared section',

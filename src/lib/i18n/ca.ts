@@ -71,6 +71,7 @@ export const ca: Messages = {
     light: 'Clar',
     dark: 'Fosc',
     language: 'Idioma',
+    source: 'Veure el codi font a GitHub',
   },
   comparison: {
     section: 'Tram comparat',

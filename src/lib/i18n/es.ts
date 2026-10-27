@@ -71,6 +71,7 @@ export const es: Messages = {
     light: 'Claro',
     dark: 'Oscuro',
     language: 'Idioma',
+    source: 'Ver el código fuente en GitHub',
   },
   comparison: {
     section: 'Tramo comparado',

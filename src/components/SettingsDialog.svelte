@@ -3,6 +3,8 @@
   import { app, type Theme } from '../lib/state.svelte';
   import Icon, { type IconName } from './Icon.svelte';
 
+  const SOURCE_URL = 'https://github.com/josepdecid/timeless-flyby';
+
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
   let dialog: HTMLDialogElement | undefined = $state();
@@ -67,6 +69,11 @@
         {/each}
       </select>
     </div>
+
+    <a class="source" href={SOURCE_URL} target="_blank" rel="noopener noreferrer">
+      <Icon name="github" />
+      {t.settings.source}
+    </a>
   </div>
 </dialog>
 
@@ -121,5 +128,18 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
+  }
+  .source {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .source:hover {
+    color: var(--text);
   }
 </style>

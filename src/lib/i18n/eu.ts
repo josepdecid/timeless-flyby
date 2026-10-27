@@ -76,6 +76,7 @@ export const eu: Messages = {
     light: 'Argia',
     dark: 'Iluna',
     language: 'Hizkuntza',
+    source: 'Ikusi iturburu-kodea GitHub-en',
   },
   comparison: {
     section: 'Konparatutako zatia',
