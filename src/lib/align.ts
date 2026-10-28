@@ -4,10 +4,17 @@ import type { LatLon, TrackPoint } from './types';
 
 /** A track is "on the route" when within this distance of the reference line. */
 export const MATCH_RADIUS = 40;
-/** Off-route gaps shorter than this (in reference distance) don't split the common section. */
-const GAP_FILL = 250;
+/**
+ * Off-route gaps shorter than this share of the reference (in reference distance), or than
+ * GAP_FILL_MIN, don't split the common section: GPS drift, a tunnel, or a stretch of the course
+ * that changed between editions of a race.
+ */
+const GAP_FILL_SHARE = 0.05;
+const GAP_FILL_MIN = 250;
 /** A track may go this far back in time between neighbouring vertices before it counts as a different pass. */
 const ORDER_SLACK = 30_000;
+/** A track jumping this far ahead in time between neighbouring vertices may have landed on another pass. */
+const PASS_JUMP = 5 * 60_000;
 /** Tighter radius used to pin down where the common section really begins and ends. */
 const EDGE_RADIUS = 15;
 /** How close a track must pass to the start line for that pass to count as a start. */
@@ -222,22 +229,60 @@ export function detectCommonSection(ref: RefRoute, others: TrackPoint[][]): Sect
   // breakBefore[j]: some track jumps back in time between vertex j-1 and j, i.e. the two sides
   // are covered by different parts of that track (its finish vs its start, say).
   const breakBefore = new Uint8Array(n);
+  const gapFill = Math.max(GAP_FILL_MIN, GAP_FILL_SHARE * ref.length);
   const grids = others.map((pts) => new SegmentGrid(ref.proj.project(pts), MATCH_RADIUS));
   grids.forEach((grid, g) => {
     const times = others[g];
     let prev = -1;
+    // After a jump ahead in time: the last match before it, where it landed, and the vertex it
+    // happened at. If the track comes back to just after `anchor` within gapFill, the jump was
+    // onto another pass of the same road (its finish, where the reference took a variant near
+    // the start) and those vertices weren't covered by this pass after all. Until then, going
+    // back in time is only a break if it turns out to be one.
+    let anchor = -1;
+    let landed = -1;
+    let jumpAt = 0;
+    let pendingBreak = -1;
+    const confirmJump = () => {
+      if (pendingBreak >= 0) breakBefore[pendingBreak] = 1;
+      anchor = -1;
+      pendingBreak = -1;
+    };
     for (let j = 0; j < n; j++) {
-      const m = grid.match(ref.xy[2 * j], ref.xy[2 * j + 1], MATCH_RADIUS, ref.heading, j, prev);
+      if (anchor >= 0 && ref.cum[j] - ref.cum[jumpAt] > gapFill) confirmJump();
+      const x = ref.xy[2 * j];
+      const y = ref.xy[2 * j + 1];
+      const m = grid.match(x, y, MATCH_RADIUS, ref.heading, j, prev);
       if (m < 0) {
         covered[j] = 0;
         continue;
       }
-      if (prev >= 0 && times[m].t < times[prev].t - ORDER_SLACK) breakBefore[j] = 1;
+      if (anchor >= 0) {
+        const r = grid.match(x, y, MATCH_RADIUS, ref.heading, j, anchor);
+        const dt = times[r].t - times[anchor].t;
+        if (dt >= -ORDER_SLACK && dt < times[landed].t - times[r].t) {
+          covered.fill(0, jumpAt, j);
+          anchor = -1;
+          pendingBreak = -1;
+          prev = r;
+          continue;
+        }
+      }
+      if (prev >= 0 && times[m].t < times[prev].t - ORDER_SLACK) {
+        if (anchor < 0) breakBefore[j] = 1;
+        else if (pendingBreak < 0) pendingBreak = j;
+      } else if (prev >= 0 && anchor < 0 && times[m].t > times[prev].t + PASS_JUMP) {
+        anchor = prev;
+        landed = m;
+        jumpAt = j;
+      }
       prev = m;
     }
+    confirmJump();
   });
 
-  // Bridge short uncovered gaps (GPS drift, a tunnel) so they don't split the section.
+  // Bridge short uncovered gaps so they don't split the section, as long as every track picks
+  // the route back up where it left it (not with a different part of itself).
   let j = 0;
   while (j < n) {
     if (covered[j]) {
@@ -246,7 +291,7 @@ export function detectCommonSection(ref: RefRoute, others: TrackPoint[][]): Sect
     }
     let k = j;
     while (k < n && !covered[k]) k++;
-    if (j > 0 && k < n && ref.cum[k] - ref.cum[j - 1] < GAP_FILL) covered.fill(1, j, k);
+    if (j > 0 && k < n && !breakBefore[k] && ref.cum[k] - ref.cum[j - 1] < gapFill) covered.fill(1, j, k);
     j = k;
   }
 

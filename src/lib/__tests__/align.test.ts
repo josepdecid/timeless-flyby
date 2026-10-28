@@ -125,6 +125,40 @@ describe('compare', () => {
     expect(cmp.tracks[1].aligned.finished).toBe(true);
   });
 
+  it('bridges a stretch of the course that changed between editions', () => {
+    // B swaps ~425 m of the way out for a variant up to ~150 m to the side, then rejoins.
+    const route = outAndBack(COAST);
+    const at = (f: number): LatLon => ({
+      lat: COAST[1].lat + f * (COAST[2].lat - COAST[1].lat),
+      lon: COAST[1].lon + f * (COAST[2].lon - COAST[1].lon),
+    });
+    const mid = at(0.5);
+    const variant: LatLon[] = [at(0.25), { lat: mid.lat - 0.0009, lon: mid.lon + 0.0012 }, at(0.75)];
+    const changed = [...route.slice(0, 2), ...variant, ...route.slice(2)];
+    const a = act('a', synthTrack({ route, speed: () => 3, start, seed: 19 }));
+    const b = act('b', synthTrack({ route: changed, speed: () => 3, start, seed: 20 }));
+    const cmp = compare([a, b], 'a', { timeMode: 'elapsed' })!;
+    // The whole course, not just the longer side of the variant.
+    expect(cmp.section.startD).toBeLessThan(60);
+    expect(cmp.section.endD).toBeGreaterThan(cmp.ref.length - 60);
+    expect(cmp.tracks[1].aligned.finished).toBe(true);
+    expect(cmp.tracks[1].aligned.passCount).toBe(1);
+  });
+
+  it('keeps the start when a variant there lies on the other track’s way to the finish', () => {
+    // Both finish along a road that crosses the start area heading the same way as the course
+    // sets off. A takes the straight road out of the start; B (the reference) bends off it, onto
+    // that finishing road, and A's only nearby match there is its own finish.
+    const m = (x: number, y: number): LatLon => ({ lat: 41.37 + y / 111_320, lon: 2.189 + x / 83_550 });
+    const loop = [m(300, 0), m(3000, 0), m(3000, 2000), m(-400, 2000), m(-400, 120), m(150, 60), m(0, 0)];
+    const a = act('a', synthTrack({ route: [m(0, 0), ...loop], speed: () => 3, start, seed: 21 }));
+    const b = act('b', synthTrack({ route: [m(0, 0), m(150, 60), ...loop], speed: () => 3, start, seed: 22 }));
+    const cmp = compare([a, b], 'b', { timeMode: 'elapsed' })!;
+    expect(cmp.section.startD).toBeLessThan(60);
+    expect(cmp.section.endD).toBeGreaterThan(cmp.ref.length - 60);
+    expect(cmp.tracks[0].aligned.finished).toBe(true);
+  });
+
   it('computes splits that add up to the total', () => {
     const a = act('a', synthTrack({ route: COAST, speed: () => 3, start, seed: 13 }));
     const b = act('b', synthTrack({ route: COAST, speed: () => 3.2, start, seed: 14 }));
